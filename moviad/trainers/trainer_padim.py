@@ -45,6 +45,9 @@ class TrainerPadim(Trainer):
         # 2. use the feature maps to get the embeddings
         embedding_vectors = self.model.raw_feature_maps_to_embeddings(layer_outputs)
 
+        
+        
+
         # 3. fit the multivariate Gaussian distribution
         if self.apply_diagonalization:
             self.model.fit_multivariate_diagonal_gaussian(

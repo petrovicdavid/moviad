@@ -5,7 +5,8 @@ from typing import Mapping, Union, Any, Dict, List, Tuple
 from dataclasses import dataclass
 
 import numpy as np
-#from profiler import profile
+
+# from profiler import profile
 from scipy.ndimage import gaussian_filter
 from scipy.spatial.distance import mahalanobis
 
@@ -53,6 +54,7 @@ def idx_to_layer_name(backbone_model_name, idx: Union[Tuple, List]):
     else:
         return idx
 
+
 @dataclass
 class PadimArgs:
     train_dataset: IadDataset | None = None
@@ -80,8 +82,8 @@ class Padim(nn.Module):
     ]
 
     def __init__(
-            self,
-            args: PadimArgs,
+        self,
+        args: PadimArgs,
     ):
         """
         Args:
@@ -102,7 +104,7 @@ class Padim(nn.Module):
 
         self.layers_idxs = idx_to_layer_name(
             backbone_model_name, layers_idxs
-         )  # feature extraction layers
+        )  # feature extraction layers
 
         self.load_backbone()
         # dimensionality reduction: random projection
@@ -129,7 +131,7 @@ class Padim(nn.Module):
         return z
 
     def raw_feature_maps_to_embeddings(
-            self, layer_outputs: Dict[str, List[torch.Tensor]]
+        self, layer_outputs: Dict[str, List[torch.Tensor]]
     ):
         """
         Given a dict of lists of outputs of the layers, concatenate the feature maps and
@@ -177,6 +179,7 @@ class Padim(nn.Module):
         # ---- EVAL INFERENCE ----
         # 2. use the feature maps to get the embeddings
         embedding_vectors = self.raw_feature_maps_to_embeddings(layer_outputs)
+
         # 3. compute the distance matrix
         if self.diag_cov:
             dist_list = self.compute_distances_diagonal(embedding_vectors)
@@ -205,7 +208,9 @@ class Padim(nn.Module):
 
         return score_map, img_scores
 
-    def fit_multivariate_diagonal_gaussian(self, embedding_vectors: torch.Tensor, update_params: bool, logger=None) -> (torch.Tensor, torch.Tensor):
+    def fit_multivariate_diagonal_gaussian(
+        self, embedding_vectors: torch.Tensor, update_params: bool, logger=None
+    ) -> (torch.Tensor, torch.Tensor):
         """
         Fit a multivariate Gaussian distribution to the set of given embedding vectors.
 
@@ -216,14 +221,14 @@ class Padim(nn.Module):
 
         embedding_vectors = embedding_vectors.view(B, C, H * W)
         mean = torch.mean(embedding_vectors.cpu(), dim=0).numpy()
-        diagonal_cov = torch.zeros(C, H*W).numpy()
+        diagonal_cov = torch.zeros(C, H * W).numpy()
         I = np.identity(C)
         # for every "patch" in the feature map, compute the covariance across the batch
         for i in range(H * W):
             # TODO: use np.var instead of np.cov in diagonal covariance computation
             temp_cov = (
-                    np.cov(embedding_vectors[:, :, i].cpu().numpy(), rowvar=False)
-                    + 0.01 * I
+                np.cov(embedding_vectors[:, :, i].cpu().numpy(), rowvar=False)
+                + 0.01 * I
             )
 
             diagonal_cov[:, i] = np.diag(temp_cov)
@@ -249,20 +254,22 @@ class Padim(nn.Module):
         for i in range(H * W):
             if self.diag_cov:
                 temp_cov = (
-                        np.cov(embedding_vectors[:, :, i].cpu().numpy(), rowvar=False)
-                        + 0.01 * I
+                    np.cov(embedding_vectors[:, :, i].cpu().numpy(), rowvar=False)
+                    + 0.01 * I
                 )
                 temp_cov[~I.astype(bool)] = 0
                 cov[:, :, i] = temp_cov
             else:
                 cov[:, :, i] = (
-                        np.cov(embedding_vectors[:, :, i].cpu().numpy(), rowvar=False)
-                        + 0.01 * I
+                    np.cov(embedding_vectors[:, :, i].cpu().numpy(), rowvar=False)
+                    + 0.01 * I
                 )
             if logger is not None:
-                logger.log({
-                    "cov": cov[:, :, i],
-                    "mean": mean[:, i], }
+                logger.log(
+                    {
+                        "cov": cov[:, :, i],
+                        "mean": mean[:, i],
+                    }
                 )
         if update_params:
             self.gauss_mean, self.gauss_cov = mean, cov
@@ -318,7 +325,6 @@ class Padim(nn.Module):
         state_dict = {k: v for k, v in state_dict.items() if k not in self.HYPERPARAMS}
         return super().load_state_dict(state_dict, strict=strict)
 
-
     def compute_distances(self, embedding_vectors: torch.Tensor):
         """
         Compute the Mahalanobis distances between the embedding vectors and the
@@ -328,7 +334,7 @@ class Padim(nn.Module):
         embedding_vectors = embedding_vectors.view(B, C, H * W).cpu().numpy()
         dist_list = []
         assert (
-                self.gauss_mean is not None and self.gauss_cov is not None
+            self.gauss_mean is not None and self.gauss_cov is not None
         ), "The model must be trained first."
         # compute each patch-embedding distance
         for i in range(H * W):
@@ -341,7 +347,6 @@ class Padim(nn.Module):
         dist_list = np.array(dist_list).transpose(1, 0).reshape(B, H, W)
         return torch.tensor(dist_list)
 
-
     def compute_distances_diagonal(self, embedding_vectors: torch.Tensor):
         """
         Compute the Mahalanobis distances between the embedding vectors and the
@@ -351,14 +356,15 @@ class Padim(nn.Module):
         embedding_vectors = embedding_vectors.view(B, C, H * W).cpu().numpy()
         dist_list = []
         assert (
-                self.gauss_mean is not None and self.diagonal_gauss_cov is not None
+            self.gauss_mean is not None and self.diagonal_gauss_cov is not None
         ), "The model must be trained first."
         # compute each patch-embedding distance
         for i in range(H * W):
             mean = self.gauss_mean[:, i]
             diag_cov_i = self.diagonal_gauss_cov[:, i]
             dist = [
-                malahanobis_distance_diagonal(sample[:, i], mean, diag_cov_i) for sample in embedding_vectors
+                malahanobis_distance_diagonal(sample[:, i], mean, diag_cov_i)
+                for sample in embedding_vectors
             ]
             dist_list.append(dist)
         dist_list = np.array(dist_list).transpose(1, 0).reshape(B, H, W)

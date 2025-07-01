@@ -1,6 +1,6 @@
 """
-This class represent a feature extractor built on top of a custom backbone. The backbone name is passed as input to the constructor. 
-Based on the model name and the layers indexes it will consider the correct layers for the feature extraction. 
+This class represent a feature extractor built on top of a custom backbone. The backbone name is passed as input to the constructor.
+Based on the model name and the layers indexes it will consider the correct layers for the feature extraction.
 """
 
 from __future__ import annotations
@@ -58,7 +58,7 @@ class CustomFeatureExtractor:
             model_name (str): name of the backbone to use
             layers_idx (list): list of layers identifiers
             device (torch.device): device to be used
-        """ 
+        """
 
         self.model_name = model_name
         self.quantized = quantized
@@ -274,12 +274,12 @@ class CustomFeatureExtractor:
             GraphModule: Feature extractor.
         """
         if pretrained:
-            model = getattr(torchvision.models, backbone)(weights = "IMAGENET1K_V1")
+            model = getattr(torchvision.models, backbone)(weights="IMAGENET1K_V1")
         else:
             model = getattr(torchvision.models, backbone)()
-        
-        return_nodes = {layer: layer for layer in return_nodes} 
-        
+
+        return_nodes = {layer: layer for layer in return_nodes}
+
         feature_extractor = create_feature_extractor(
             model=model, return_nodes=return_nodes
         )
