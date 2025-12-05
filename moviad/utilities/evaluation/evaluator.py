@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Callable
 from tqdm import tqdm
 import torch
+import pandas as pd
 import numpy as np
 
 from .metrics import MetricLvl, Metric
@@ -64,18 +65,36 @@ class Evaluator:
         pred_anom_map = postprocess(pred_anom_map)
 
         # TODO: Implement using generic metrics
-        """
         report = []
-        for metric in metrics:
+        for metric in self.metrics:
             if metric.level == MetricLvl.IMAGE:
-                pred = anom_score
-                gt = labels
+                pred = pred_anom_score
+                gt = gt_label
             elif metric.level == MetricLvl.PIXEL:
-                pred = anom_maps
-                gt = masks
+                pred = pred_anom_map
+                gt = gt_mask
             report.append({metric.name:metric.compute(gt, pred)})
-        """
+    
+        # return a pandas dataframe
+        return pd.DataFrame().from_records(report)
 
+"""
+Usage example:
+
+    from moviad.utilities.evaluation.metrics import MetricLvl, SimpleMetric, RocAuc
+
+    # import average precision from sklearn
+    from sklearn.metrics import average_precision_score
+
+    evaluator = Evaluator(
+        dataloader=None,
+        metrics=[
+            SimpleMetric("avg_prec", average_precision_score, MetricLvl.IMAGE),
+            RocAuc(MetricLvl.IMAGE),
+        ],
+        device=None,
+    )
+"""
 
 '''
 TODO: remove this

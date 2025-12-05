@@ -30,7 +30,7 @@ class PadimArgs(Args):
 
 def train_padim(args: PadimArgs, logger=None) -> None:
     train_dataset, test_dataset = load_datasets(args.dataset_config, args.dataset_type, args.category)
-    padim = Padi m(
+    padim = Padim(
         args.backbone,
         args.category,
         device=args.device,

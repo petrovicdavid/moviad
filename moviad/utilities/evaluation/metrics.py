@@ -37,9 +37,10 @@ class Metric(ABC):
     @abstractmethod
     def compute(self, gt, pred): ...
 
+
 # TODO: add simple metric to add a metric object to use in the evaluator
 class SimpleMetric(Metric):
-    def __init__(self, name, compute, level: MetricLvl):
+    def __init__(self, name, function, level: MetricLvl):
         """
         Args:
             level (MetricLvl): The level of the metric (e.g. image, pixel).
@@ -47,16 +48,17 @@ class SimpleMetric(Metric):
         """
         self.level = level
         self.base_name = name
-        self.compute = compute
-    
+        self.compute = function
+
     def compute(self, gt, pred):
         if self.level == MetricLvl.PIXEL:
             pred, gt = pred.flatten(), gt.flatten()
         return self.compute(gt, pred)
-    
+
     @property
     def name(self):
         return f"{self.level.value}_{self.base_name}"
+
 
 class F1(Metric):
     @property
@@ -71,7 +73,6 @@ class F1(Metric):
         b = precision + recall
         f1 = np.divide(a, b, out=np.zeros_like(a), where=b != 0)
         return np.max(f1)
-
 
 
 class RocAuc(Metric):
