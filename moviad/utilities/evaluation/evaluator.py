@@ -49,7 +49,8 @@ class Evaluator:
         model.eval()
 
         # Initialize results as numpy arrays
-        init = lambda *t: (np.empty((0,), dtype=t_) for t_ in t)
+        def init(*t):
+            return tuple(np.empty((0,), dtype=t_) for t_ in t)
         gt_mask, gt_label, pred_anom_map, pred_anom_score = init(int, *(float,) * 3)
 
         for image, label, mask, path in tqdm(self.dataloader, desc="Eval"):
@@ -64,7 +65,6 @@ class Evaluator:
 
         pred_anom_map = postprocess(pred_anom_map)
 
-        # TODO: Implement using generic metrics
         report = []
         for metric in self.metrics:
             if metric.level == MetricLvl.IMAGE:
@@ -73,10 +73,11 @@ class Evaluator:
             elif metric.level == MetricLvl.PIXEL:
                 pred = pred_anom_map
                 gt = gt_mask
-            report.append({metric.name:metric.compute(gt, pred)})
-    
+            report.append({metric.name: metric.compute(gt, pred)})
+
         # return a pandas dataframe
         return pd.DataFrame().from_records(report)
+
 
 """
 Usage example:

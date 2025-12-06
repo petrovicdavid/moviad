@@ -14,9 +14,9 @@ authors = [
     {name = "MTI HAN LAB", email = "hanlab.eecs+github@gmail.com"},
 ]
 
-urls = { 
-    "Homepage" = "https://github.com/mit-han-lab/mcunet"
-}
+urls = [  
+    {Homepage = "https://github.com/mit-han-lab/mcunet"}
+]
 
 dependencies = [
     "torch",
