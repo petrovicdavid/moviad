@@ -1,8 +1,8 @@
 import torch
 from dataclasses import dataclass
 
-from moviad.datasets.builder import DatasetConfig, DatasetType
-from moviad.utilities.configurations import Split
+from datasets.builder import DatasetConfig, DatasetType
+from utilities.configurations import Split
 
 @dataclass
 class Args:

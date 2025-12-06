@@ -6,9 +6,9 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from moviad.models.rd4ad.rd4ad import RD4AD
-from moviad.utilities.evaluation.evaluator import Evaluator
-from moviad.trainers.trainer import TrainerResult, Trainer
+from models.rd4ad.rd4ad import RD4AD
+from utilities.evaluation.evaluator import Evaluator
+from trainers.trainer import TrainerResult, Trainer
 
 class TrainerRD4AD(Trainer):
 

@@ -6,12 +6,12 @@ from typing import Optional, List, Any
 import torch
 from torch.utils.data import Dataset, DataLoader
 
-from moviad.common.args import Args
-from moviad.datasets.iad_dataset import IadDataset
-from moviad.entrypoints.common import load_datasets
-from moviad.models.stfpm.stfpm import Stfpm
-from moviad.trainers.trainer_stfpm import train_param_grid_search
-from moviad.utilities.evaluation.evaluator import Evaluator, append_results
+from common.args import Args
+from datasets.iad_dataset import IadDataset
+from entrypoints.common import load_datasets
+from models.stfpm.stfpm import Stfpm
+from trainers.trainer_stfpm import train_param_grid_search
+from utilities.evaluation.evaluator import Evaluator, append_results
 
 
 @dataclass

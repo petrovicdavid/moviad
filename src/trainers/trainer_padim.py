@@ -2,8 +2,8 @@ from __future__ import annotations
 from tqdm import tqdm
 import torch
 
-from moviad.models.padim.padim import Padim
-from moviad.trainers.trainer import Trainer, TrainerResult
+from models.padim.padim import Padim
+from trainers.trainer import Trainer, TrainerResult
 
 
 class TrainerPadim(Trainer):

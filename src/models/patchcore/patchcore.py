@@ -15,9 +15,9 @@ import torch.nn.functional as F
 from torch import Tensor, nn
 
 from .product_quantizer import ProductQuantizer
-from ...models.patchcore.anomaly_map import AnomalyMapGenerator
-from ...utilities.custom_feature_extractor_trimmed import CustomFeatureExtractor
-from ...utilities.get_sizes import *
+from models.patchcore.anomaly_map import AnomalyMapGenerator
+from utilities.custom_feature_extractor_trimmed import CustomFeatureExtractor
+from utilities.get_sizes import *
 
 class PatchCore(nn.Module):
     """Patchcore Module."""

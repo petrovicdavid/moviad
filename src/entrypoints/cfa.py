@@ -8,16 +8,16 @@ import torch
 from torch.utils.data.dataset import Dataset
 from tqdm import tqdm
 
-from moviad.common.args import Args
-from moviad.datasets.builder import DatasetFactory, DatasetType, DatasetConfig
-from moviad.datasets.iad_dataset import IadDataset
-from moviad.datasets.mvtec.mvtec_dataset import MVTecDataset
-from moviad.entrypoints.common import load_datasets
-from moviad.utilities.custom_feature_extractor_trimmed import CustomFeatureExtractor
-from moviad.models.cfa.cfa import CFA
-from moviad.trainers.trainer_cfa import TrainerCFA
-from moviad.utilities.configurations import TaskType, Split
-from moviad.utilities.evaluation.evaluator import Evaluator
+from common.args import Args
+from datasets.builder import DatasetFactory, DatasetType, DatasetConfig
+from datasets.iad_dataset import IadDataset
+from datasets.mvtec.mvtec_dataset import MVTecDataset
+from entrypoints.common import load_datasets
+from utilities.custom_feature_extractor_trimmed import CustomFeatureExtractor
+from models.cfa.cfa import CFA
+from trainers.trainer_cfa import TrainerCFA
+from utilities.configurations import TaskType, Split
+from utilities.evaluation.evaluator import Evaluator
 
 
 @dataclass

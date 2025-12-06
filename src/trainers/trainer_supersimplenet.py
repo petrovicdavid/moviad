@@ -2,9 +2,9 @@ import torch
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import MultiStepLR
 
-from moviad.trainers.trainer import Trainer, TrainerResult
-from moviad.models.components.simplenet.loss import SSNLoss
-from moviad.models.supersimplenet.supersimplenet import SuperSimpleNet 
+from trainers.trainer import Trainer, TrainerResult
+from models.components.simplenet.loss import SSNLoss
+from models.supersimplenet.supersimplenet import SuperSimpleNet 
 
 from tqdm import tqdm
 

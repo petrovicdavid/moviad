@@ -9,14 +9,14 @@ import numpy as np
 from PIL import ImageEnhance
 from pandas.core.interchange.dataframe_protocol import DataFrame
 
-from moviad.backbones.micronet.utils import compute_mask_contamination
-from moviad.datasets.realiad.realiad_dataset_configurations import RealIadClassEnum, RealIadAnomalyClass
-from moviad.datasets.visa.visa_dataset_configurations import VisaDatasetCategory
-from moviad.utilities.configurations import Split
+from backbones.micronet.utils import compute_mask_contamination
+from datasets.realiad.realiad_dataset_configurations import RealIadClassEnum, RealIadAnomalyClass
+from datasets.visa.visa_dataset_configurations import VisaDatasetCategory
+from utilities.configurations import Split
 
 import json
 
-from moviad.utilities.pil_image_utils import min_max_scale_image
+from utilities.pil_image_utils import min_max_scale_image
 
 
 class VisaClasses(Enum):

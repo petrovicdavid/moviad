@@ -7,8 +7,8 @@ from __future__ import annotations
 import torch
 import torchvision
 from torchvision.models.feature_extraction import create_feature_extractor
-from moviad.backbones.mcunet.mcunet.model_zoo import net_id_list, build_model
-from moviad.backbones.micronet.micronet import micronetBB
+from backbones.mcunet.mcunet.model_zoo import net_id_list, build_model
+from backbones.micronet.micronet import micronetBB
 #from micromind import PhiNet
 
 OTHERS_BACKBONES = (

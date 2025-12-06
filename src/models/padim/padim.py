@@ -14,7 +14,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from ...utilities.custom_feature_extractor_trimmed import CustomFeatureExtractor
+from utilities.custom_feature_extractor_trimmed import CustomFeatureExtractor
 
 # Dict: "backbone_model_name" -> {(layer_idxs): (true_dimension, random_projection_dimension)}
 EMBEDDING_SIZES = {

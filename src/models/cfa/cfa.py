@@ -16,9 +16,9 @@ import numpy as np
 import cv2 as cv
 import matplotlib.pyplot as plt
 
-from moviad.models.components.cfa.descriptor import Descriptor
-from moviad.utilities.custom_feature_extractor_trimmed import CustomFeatureExtractor
-from moviad.utilities.get_sizes import *
+from models.components.cfa.descriptor import Descriptor
+from utilities.custom_feature_extractor_trimmed import CustomFeatureExtractor
+from utilities.get_sizes import *
 
 class CFA(nn.Module):
 

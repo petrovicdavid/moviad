@@ -5,10 +5,10 @@ import wandb
 from torch.optim import AdamW
 from tqdm import tqdm
 
-from moviad.models.cfa.cfa import CFA
-from moviad.utilities.custom_feature_extractor_trimmed import CustomFeatureExtractor
-from moviad.utilities.evaluation.evaluator import Evaluator
-from moviad.trainers.trainer import TrainerResult, Trainer
+from models.cfa.cfa import CFA
+from utilities.custom_feature_extractor_trimmed import CustomFeatureExtractor
+from utilities.evaluation.evaluator import Evaluator
+from trainers.trainer import TrainerResult, Trainer
 
 
 class TrainerCFA(Trainer):

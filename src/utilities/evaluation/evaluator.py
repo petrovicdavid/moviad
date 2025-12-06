@@ -82,7 +82,7 @@ class Evaluator:
 """
 Usage example:
 
-    from moviad.utilities.evaluation.metrics import MetricLvl, SimpleMetric, RocAuc
+    from utilities.evaluation.metrics import MetricLvl, SimpleMetric, RocAuc
 
     # import average precision from sklearn
     from sklearn.metrics import average_precision_score

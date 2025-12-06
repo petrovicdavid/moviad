@@ -10,8 +10,8 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 from torchvision.transforms import InterpolationMode
 
-from moviad.datasets.iad_dataset import IadDataset
-from moviad.utilities.configurations import Split, TaskType, LabelName
+from datasets.iad_dataset import IadDataset
+from utilities.configurations import Split, TaskType, LabelName
 
 """
 The MIIC dataset when downloaded follows this general structure:

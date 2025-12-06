@@ -6,7 +6,7 @@ from __future__ import annotations
 import torch
 import torch.nn.functional as F
 
-from moviad.models.components.cfa.coordconv import CoordConv2d
+from models.components.cfa.coordconv import CoordConv2d
 
 SUPPORTED_BACKBONES = ("vgg19_bn", "resnet18", "wide_resnet50_2", "efficientnet_b5")
 

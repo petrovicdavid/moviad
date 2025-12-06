@@ -2,12 +2,12 @@ import json
 import os
 from enum import Enum
 
-from moviad.datasets.iad_dataset import IadDataset
-from moviad.datasets.miic.miic_dataset import MiicDataset, MiicDatasetConfig
-from moviad.datasets.mvtec.mvtec_dataset import MVTecDataset
-from moviad.datasets.realiad.realiad_dataset import RealIadDataset
-from moviad.datasets.visa.visa_dataset import VisaDataset
-from moviad.utilities.configurations import TaskType, Split
+from datasets.iad_dataset import IadDataset
+from datasets.miic.miic_dataset import MiicDataset, MiicDatasetConfig
+from datasets.mvtec.mvtec_dataset import MVTecDataset
+from datasets.realiad.realiad_dataset import RealIadDataset
+from datasets.visa.visa_dataset import VisaDataset
+from utilities.configurations import TaskType, Split
 
 
 class DatasetConfig:

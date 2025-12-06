@@ -15,10 +15,10 @@ import torch
 from torchvision.transforms import transforms
 from torch.utils.data import Dataset
 
-from moviad.backbones.micronet.utils import compute_mask_contamination
-from moviad.datasets.iad_dataset import IadDataset
-from moviad.datasets.exceptions.exceptions import DatasetTooSmallToContaminateException
-from moviad.utilities.configurations import TaskType, Split, LabelName
+from backbones.micronet.utils import compute_mask_contamination
+from datasets.iad_dataset import IadDataset
+from datasets.exceptions.exceptions import DatasetTooSmallToContaminateException
+from utilities.configurations import TaskType, Split, LabelName
 
 IMG_EXTENSIONS = (".png", ".PNG")
 

@@ -5,9 +5,9 @@ from typing import Optional, List
 import numpy as np
 import PIL.Image as Image
 
-from moviad.backbones.micronet.utils import compute_mask_contamination
-from moviad.datasets.realiad.realiad_dataset_configurations import RealIadClassEnum, RealIadAnomalyClass
-from moviad.utilities.configurations import Split
+from backbones.micronet.utils import compute_mask_contamination
+from datasets.realiad.realiad_dataset_configurations import RealIadClassEnum, RealIadAnomalyClass
+from utilities.configurations import Split
 
 import json
 

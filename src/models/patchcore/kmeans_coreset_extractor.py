@@ -3,7 +3,7 @@ from scipy.cluster.vq import kmeans, kmeans2
 from sklearn.cluster import MiniBatchKMeans, KMeans
 from typing_extensions import override
 
-from moviad.models.patchcore.kcenter_greedy import CoresetExtractor
+from models.patchcore.kcenter_greedy import CoresetExtractor
 
 
 class MiniBatchKMeansCoresetExtractor(CoresetExtractor):

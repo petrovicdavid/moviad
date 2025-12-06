@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from typing import List, Any
-from moviad.backbones.micronet import activation
-from moviad.backbones.micronet.utils import prepare_dictionary
+from backbones.micronet import activation
+from backbones.micronet.utils import prepare_dictionary
 
 
 import math

@@ -5,8 +5,8 @@ from torchvision.transforms import GaussianBlur
 import torch.nn.functional as F
 import numpy as np
 
-from moviad.models.components.rd4ad.resnet import resnet18
-from moviad.models.components.rd4ad.deresnet import de_resnet18
+from models.components.rd4ad.resnet import resnet18
+from models.components.rd4ad.deresnet import de_resnet18
 
 class RD4AD(torch.nn.Module):
 

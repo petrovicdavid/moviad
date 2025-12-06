@@ -2,7 +2,7 @@ from __future__ import annotations
 import torch
 from typing import Any, Callable
 
-from moviad.utilities.evaluation.evaluator import Evaluator
+from utilities.evaluation.evaluator import Evaluator
 
 
 class Trainer:

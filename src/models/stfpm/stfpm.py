@@ -2,7 +2,7 @@ from typing import List, Tuple
 import torch
 import torch.nn.functional as F
 
-from moviad.utilities.custom_feature_extractor_trimmed import CustomFeatureExtractor
+from utilities.custom_feature_extractor_trimmed import CustomFeatureExtractor
 
 class STFPM(torch.nn.Module):
 

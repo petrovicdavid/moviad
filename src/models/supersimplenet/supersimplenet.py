@@ -21,10 +21,10 @@ import torch.nn.functional as F
 from torch import nn
 import torchvision
 
-from moviad.models.components.simplenet.discriminator import Discriminator
-from moviad.models.components.simplenet.anomaly_generator import AnomalyGenerator
-from moviad.models.components.simplenet.feature_extractor import UpscalingFeatureExtractor
-from moviad.models.components.blur import GaussianBlur
+from models.components.simplenet.discriminator import Discriminator
+from models.components.simplenet.anomaly_generator import AnomalyGenerator
+from models.components.simplenet.feature_extractor import UpscalingFeatureExtractor
+from models.components.blur import GaussianBlur
 
 class SuperSimpleNet(nn.Module):
 

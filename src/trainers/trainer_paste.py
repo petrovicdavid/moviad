@@ -11,8 +11,8 @@ from sklearn.model_selection import train_test_split
 
 from ..datasets.iad_dataset import IadDataset
 from ..models.stfpm.stfpm import Stfpm
-from moviad.datasets.mvtec.mvtec_dataset import MVTecDataset
-from moviad.datasets.miic.miic_dataset import MiicDataset, MiicDatasetConfig
+from datasets.mvtec.mvtec_dataset import MVTecDataset
+from datasets.miic.miic_dataset import MiicDataset, MiicDatasetConfig
 from ..utilities.configurations import TaskType, Split
 
 

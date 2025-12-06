@@ -1,9 +1,9 @@
 import torch
 from tqdm import tqdm
 from typing_extensions import override
-from moviad.models.patchcore.kmeans_coreset_extractor import MiniBatchKMeansCoresetExtractor
-from moviad.models.patchcore.patchcore import PatchCore
-from moviad.trainers.trainer_patchcore import TrainerPatchCore
+from models.patchcore.kmeans_coreset_extractor import MiniBatchKMeansCoresetExtractor
+from models.patchcore.patchcore import PatchCore
+from trainers.trainer_patchcore import TrainerPatchCore
 
 
 class BatchPatchCoreTrainer(TrainerPatchCore):

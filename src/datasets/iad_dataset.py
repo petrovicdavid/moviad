@@ -3,7 +3,7 @@ from enum import Enum
 from dataclasses import dataclass
 
 from torch.utils.data.dataset import Dataset
-from moviad.utilities.configurations import TaskType, Split
+from utilities.configurations import TaskType, Split
 
 
 class IadDataset(Dataset):

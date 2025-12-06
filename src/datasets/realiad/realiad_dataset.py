@@ -6,11 +6,11 @@ import os
 from torchvision import transforms
 from torchvision.transforms import InterpolationMode
 
-from moviad.datasets.iad_dataset import IadDataset
-from moviad.datasets.exceptions.exceptions import DatasetTooSmallToContaminateException
-from moviad.datasets.realiad.realiad_data import RealIadData
-from moviad.datasets.realiad.realiad_dataset_configurations import RealIadClassEnum, RealIadAnomalyClass
-from moviad.utilities.configurations import TaskType, Split, LabelName
+from datasets.iad_dataset import IadDataset
+from datasets.exceptions.exceptions import DatasetTooSmallToContaminateException
+from datasets.realiad.realiad_data import RealIadData
+from datasets.realiad.realiad_dataset_configurations import RealIadClassEnum, RealIadAnomalyClass
+from utilities.configurations import TaskType, Split, LabelName
 
 
 class RealIadDataset(IadDataset):

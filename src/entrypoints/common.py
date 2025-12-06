@@ -1,6 +1,6 @@
-from moviad.datasets.builder import DatasetFactory, DatasetConfig, DatasetType
-from moviad.datasets.iad_dataset import IadDataset
-from moviad.utilities.configurations import Split
+from datasets.builder import DatasetFactory, DatasetConfig, DatasetType
+from datasets.iad_dataset import IadDataset
+from utilities.configurations import Split
 
 
 def load_datasets(dataset_config: DatasetConfig, dataset_type: DatasetType, dataset_category: str, image_size: (int, int) = None)\

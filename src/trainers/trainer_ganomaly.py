@@ -2,8 +2,8 @@ import torch
 from torch.optim import Adam
 from torch.optim.lr_scheduler import MultiStepLR
 
-from moviad.trainers.trainer import Trainer, TrainerResult
-from moviad.models.components.ganomaly.loss import GeneratorLoss, DiscriminatorLoss
+from trainers.trainer import Trainer, TrainerResult
+from models.components.ganomaly.loss import GeneratorLoss, DiscriminatorLoss
 
 from tqdm import tqdm
 

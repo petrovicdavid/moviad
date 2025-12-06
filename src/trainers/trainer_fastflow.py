@@ -5,8 +5,8 @@ import torch
 from torch import Tensor
 from torch import nn
 
-from moviad.utilities.evaluation.evaluator import Evaluator
-from moviad.trainers.trainer import TrainerResult, Trainer
+from utilities.evaluation.evaluator import Evaluator
+from trainers.trainer import TrainerResult, Trainer
 
 
 class TrainerFastFlow(Trainer):

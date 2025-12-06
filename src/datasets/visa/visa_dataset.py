@@ -6,11 +6,11 @@ import torch
 from torchvision import transforms
 from torchvision.transforms import InterpolationMode
 
-from moviad.datasets.iad_dataset import IadDataset
-from moviad.datasets.exceptions.exceptions import DatasetTooSmallToContaminateException
-from moviad.datasets.visa.visa_data import VisaData, VisaAnomalyClass
-from moviad.datasets.visa.visa_dataset_configurations import VisaDatasetCategory
-from moviad.utilities.configurations import Split, LabelName
+from datasets.iad_dataset import IadDataset
+from datasets.exceptions.exceptions import DatasetTooSmallToContaminateException
+from datasets.visa.visa_data import VisaData, VisaAnomalyClass
+from datasets.visa.visa_dataset_configurations import VisaDatasetCategory
+from utilities.configurations import Split, LabelName
 
 
 class VisaDataset(IadDataset):

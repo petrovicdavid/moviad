@@ -12,7 +12,7 @@ from sklearn.metrics import (
 import numpy as np
 from skimage.measure import label, regionprops
 
-from moviad.models.patchcore.product_quantizer import ProductQuantizer
+from models.patchcore.product_quantizer import ProductQuantizer
 
 
 class MetricLvl(Enum):

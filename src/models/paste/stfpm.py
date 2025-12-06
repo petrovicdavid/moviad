@@ -1,6 +1,6 @@
 from typing import Optional, Union, Any, Mapping, List, Tuple
 
-from moviad.utilities.custom_feature_extractor_trimmed import (
+from utilities.custom_feature_extractor_trimmed import (
     CustomFeatureExtractor,
 )
 from PIL import Image

@@ -5,10 +5,10 @@ from sklearn.cluster import MiniBatchKMeans
 from tqdm import tqdm
 import os
 
-from moviad.models.patchcore.patchcore import PatchCore
-from moviad.models.patchcore.kcenter_greedy import CoresetExtractor
-from moviad.utilities.evaluation.evaluator import Evaluator
-from moviad.trainers.trainer import Trainer, TrainerResult
+from models.patchcore.patchcore import PatchCore
+from models.patchcore.kcenter_greedy import CoresetExtractor
+from utilities.evaluation.evaluator import Evaluator
+from trainers.trainer import Trainer, TrainerResult
 
 class TrainerPatchCore(Trainer):
 
