@@ -4,14 +4,14 @@ from glob import glob
 from typing import Optional, List, Any
 
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 
 from common.args import Args
+from models.stfpm.stfpm import STFPM
 from datasets.iad_dataset import IadDataset
 from entrypoints.common import load_datasets
-from models.stfpm.stfpm import Stfpm
-from trainers.trainer_stfpm import train_param_grid_search
-from utilities.evaluation.evaluator import Evaluator, append_results
+from trainers.trainer_paste import train_param_grid_search
+from utilities.evaluation.evaluator import Evaluator
 
 
 @dataclass
@@ -33,14 +33,16 @@ class STFPMArgs(Args):
     normalize_dataset: bool = True
     student_bootstrap_layer = [0]
     seeds = [3]
-    results_dirpath: str = './results'
-    input_sizes: dict = field(default_factory=lambda: {
-        "mcunet-in3": (176, 176),
-        "mobilenet_v2": (224, 224),
-        "phinet_1.2_0.5_6_downsampling": (224, 224),
-        "wide_resnet50_2": (224, 224),
-        "micronet-m1": (224, 224),
-    })
+    results_dirpath: str = "./results"
+    input_sizes: dict = field(
+        default_factory=lambda: {
+            "mcunet-in3": (176, 176),
+            "mobilenet_v2": (224, 224),
+            "phinet_1.2_0.5_6_downsampling": (224, 224),
+            "wide_resnet50_2": (224, 224),
+            "micronet-m1": (224, 224),
+        }
+    )
     ad_model: str = None
     trained_models_filepaths: Optional[List[str]] = None
 
@@ -70,13 +72,15 @@ class STFPMArgs(Args):
             "results_dirpath": self.results_dirpath,
             "input_sizes": self.input_sizes,
             "trained_models_filepaths": self.trained_models_filepaths,
-            "ad_model": self.ad_model
+            "ad_model": self.ad_model,
         }
 
 
 def train_stfpm(params: STFPMArgs, logger=None, evaluate=True) -> None:
     print(f"Training with params: {params}")
-    train_dataset, test_dataset = load_datasets(params.dataset_config, params.dataset_type, params.categories[0])
+    train_dataset, test_dataset = load_datasets(
+        params.dataset_config, params.dataset_type, params.categories[0]
+    )
     params.train_dataset = train_dataset
     params.test_dataset = test_dataset
     params.epochs = params.epochs * len(params.ad_layers)
@@ -123,8 +127,9 @@ def test_stfpm(params: STFPMArgs, logger=None) -> None:
 
         # load the model snapshot
 
-        model = Stfpm(input_size=params.img_input_size,
-                      output_size=params.img_output_size)
+        model = STFPM(
+            input_size=params.img_input_size, output_size=params.img_output_size
+        )
         model.load_state_dict(
             torch.load(checkpoint_path, map_location=params.device), strict=False
         )
@@ -159,114 +164,3 @@ def test_stfpm(params: STFPMArgs, logger=None) -> None:
         )
 
         torch.cuda.empty_cache()
-
-
-def visualize_stfpm(params: STFPMArgs):
-    if params.trained_models_filepaths is None:
-        trained_models_filepaths = glob(
-            os.path.join(params.checkpoint_dir, "**/*.pth.tar"), recursive=True
-        )
-    if len(trained_models_filepaths) == 0:
-        raise ValueError(f"No trained models found in {params.checkpoint_dir}")
-
-    if not os.path.exists(params.results_dirpath):
-        os.makedirs(params.results_dirpath)
-
-    models = list(params.input_sizes.keys())
-
-    models_to_load = []
-    for checkpoint_path in trained_models_filepaths:
-        if params.model_name not in checkpoint_path:
-            continue
-        found = False
-        for cat in params.categories:
-            if cat in checkpoint_path:
-                found = True
-                break
-        if not found:
-            continue
-        if params.boot_layer is not None:
-            if f"boots{params.boot_layer}" not in checkpoint_path:
-                continue
-        else:
-            if "boots" in checkpoint_path:
-                continue
-        models_to_load.append(checkpoint_path)
-
-    print("-" * 20, "Models to load", "-" * 20)
-    print(models_to_load)
-
-    assert len(models_to_load) > 0, "No models to load"
-
-    for checkpoint_path in models_to_load:
-        torch.manual_seed(0)
-
-        # get category from dirname
-        category = os.path.basename(os.path.dirname(checkpoint_path))
-
-        # get backbone model name from filename
-        backbone_model_name = [
-            m for m in models if m in os.path.basename(checkpoint_path)
-        ][0]
-        img_input_size = params.input_sizes[backbone_model_name]
-
-        print(f"backbone model name: {backbone_model_name}")
-        print(f"img_input_size: {img_input_size}")
-        print(f"Category: {category}")
-
-        # test_dataloader = DataLoader(
-        #     test_dataset, batch_size=batch_size, shuffle=True
-        # )
-        print(f"Length test dataset: {len(params.test_dataset)}")
-
-        # load the model snapshot
-        model = Stfpm()
-        model.load_state_dict(
-            torch.load(checkpoint_path, map_location=params.device), strict=False
-        )
-        model.to(params.device)
-
-        # save the scores
-        visualization_path = os.path.join(
-            params.feature_maps_dir,
-            f"{category}_{backbone_model_name}_lay{model.ad_layers}_share{model.student_bootstrap_layer}",
-        )
-        # 3 files: teacher_maps, student_maps, diff_maps
-        teacher_maps, student_maps, diff_maps = [], [], []
-        anomaly_maps, original_imgs, labels = [], [], []
-        masks = []
-        model.attach_hooks(teacher_maps, student_maps)
-
-        for image, label, mask, path in params.test_dataset:
-            model.eval()
-            image = image.unsqueeze(0)
-            with torch.no_grad():
-                anomaly_map, anomaly_score = model(image.to(params.device))
-                anomaly_maps.append(anomaly_map.cpu().numpy())
-                original_imgs.append(image.cpu().numpy())
-                labels.append(label)
-                masks.append(mask.cpu().numpy())
-
-        import pickle
-
-        if not os.path.exists(visualization_path):
-            os.makedirs(visualization_path)
-
-        print("num inferences: len(teacher_maps)", len(teacher_maps))
-        print("len(student_maps)", len(student_maps))
-
-        print("Len of teacher_maps[0]", len(teacher_maps[0]))
-        print("Len of student_maps[0]", len(student_maps[0]))
-
-        with open(os.path.join(visualization_path, "teacher_maps.pkl"), "wb") as f:
-            pickle.dump(teacher_maps, f)
-        with open(os.path.join(visualization_path, "student_maps.pkl"), "wb") as f:
-            pickle.dump(student_maps, f)
-        with open(os.path.join(visualization_path, "anomaly_maps.pkl"), "wb") as f:
-            pickle.dump(anomaly_maps, f)
-        with open(os.path.join(visualization_path, "original_imgs.pkl"), "wb") as f:
-            pickle.dump(original_imgs, f)
-        with open(os.path.join(visualization_path, "labels.pkl"), "wb") as f:
-            pickle.dump(labels, f)
-        with open(os.path.join(visualization_path, "masks.pkl"), "wb") as f:
-            pickle.dump(masks, f)

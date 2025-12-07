@@ -9,11 +9,11 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from sklearn.model_selection import train_test_split
 
-from ..datasets.iad_dataset import IadDataset
-from ..models.stfpm.stfpm import Stfpm
+from datasets.iad_dataset import IadDataset
+from models.stfpm.stfpm import STFPM
 from datasets.mvtec.mvtec_dataset import MVTecDataset
 from datasets.miic.miic_dataset import MiicDataset, MiicDatasetConfig
-from ..utilities.configurations import TaskType, Split
+from utilities.configurations import TaskType, Split
 
 
 def save_logs(logs, category, log_dirpath, log_filename):
@@ -29,7 +29,7 @@ def save_logs(logs, category, log_dirpath, log_filename):
 
 
 def train_model(
-        model: Stfpm,
+        model: STFPM,
         train_loader: DataLoader,
         val_loader: DataLoader,
         epochs: int,

@@ -82,68 +82,17 @@ class Evaluator:
 """
 Usage example:
 
-    from utilities.evaluation.metrics import MetricLvl, SimpleMetric, RocAuc
+from utilities.evaluation.metrics import MetricLvl, SimpleMetric, RocAuc
 
-    # import average precision from sklearn
-    from sklearn.metrics import average_precision_score
+# import average precision from sklearn
+from sklearn.metrics import average_precision_score
 
-    evaluator = Evaluator(
-        dataloader=None,
-        metrics=[
-            SimpleMetric("avg_prec", average_precision_score, MetricLvl.IMAGE),
-            RocAuc(MetricLvl.IMAGE),
-        ],
-        device=None,
-    )
+evaluator = Evaluator(
+    dataloader=None,
+    metrics=[
+        SimpleMetric("avg_prec", average_precision_score, MetricLvl.IMAGE),
+        RocAuc(MetricLvl.IMAGE),
+    ],
+    device=None,
+)
 """
-
-'''
-TODO: remove this
-def append_results(
-    output_path: Union[str, os.PathLike],
-    category: str,
-    seed: Optional[int],
-    img_roc_auc: float,
-    per_pixel_rocauc: float,
-    f1_img: float,
-    f1_pxl: float,
-    pr_auc_img: float,
-    pr_auc_pxl: float,
-    au_pro_pxl: float,
-    ad_model: str,
-    feature_layers: str,
-    backbone: str,
-    weights: Optional[str],
-    bootstrap_layer: Optional[int],
-    epochs: Optional[int],
-    input_img_size: Optional[tuple[int, int]],
-    output_img_size: Optional[tuple[int, int]],
-):
-    """
-    Save the results of the evaluation in a file
-    """
-    df = pd.DataFrame(
-        {
-            "category": [category],
-            "seed": [seed],
-            "img_roc_auc": [img_roc_auc],
-            "per_pixel_rocauc": [per_pixel_rocauc],
-            "f1_img": [f1_img],
-            "f1_pxl": [f1_pxl],
-            "pr_auc_img": [pr_auc_img],
-            "pr_auc_pxl": [pr_auc_pxl],
-            "au_pro_pxl": [au_pro_pxl],
-            "ad_model": [ad_model],
-            "feature_layers": [feature_layers],
-            "backbone": [backbone],
-            "weights": [weights],
-            "eval_datetime": [pd.Timestamp.now()],
-            "bootstrap_layer": [bootstrap_layer],
-            "epochs": [epochs],
-        }
-    )
-    if os.path.isfile(output_path):
-        old_df = pd.read_csv(output_path)
-        df = pd.concat([old_df, df], ignore_index=True)
-    df.to_csv(output_path, index=False)
-'''
