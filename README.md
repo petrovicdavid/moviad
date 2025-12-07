@@ -72,18 +72,10 @@ For every main script all its parameters are documented.
 
 ## How to Install
 
-Inside the main repository directory, run the following command:
-
-Editable mode (if you need to work on the code):
+Inside the main repository directory, after installing [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-pip install -e ./
-```
-
-Fixed mode (if you just want to use the code):
-
-```bash
-pip install ./
+uv sync
 ```
 
 ## Contribute
@@ -94,6 +86,15 @@ If you want to contribute to the repository, follow the present code structure:
 - inside the <code>/datasets</code> directory put the code for possible new anomaly detection datasets that must be used
 
 Every contribution must be open with a pull request. 
+
+**Execute tests**
+
+Please, before opening a pull request, execute the tests with the command, and add new tests if you added new functionalities:
+
+```bash
+uv run pytest -v -s
+```
+
 
 ## Citations
 
