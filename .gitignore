@@ -1,5 +1,6 @@
 *.idea
 .vscode/
+disk
 
 # Documentation
 docs/*
