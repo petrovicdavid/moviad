@@ -1,13 +1,10 @@
-import contextlib
-from datetime import datetime
-import os
-from logging import Logger
-
-import numpy as np
+import io
+import pstats
 import torch
 import cProfile
-import pstats
-import io
+import contextlib
+import numpy as np
+from datetime import datetime
 from memory_profiler import memory_usage
 
 
@@ -40,8 +37,8 @@ class Profiler:
 
         # Track GPU memory if available
         if torch.cuda.is_available():
-            before_allocated = torch.cuda.memory_allocated(0) / 1024 ** 2  # MB
-            before_cached = torch.cuda.memory_reserved(0) / 1024 ** 2  # MB
+            before_allocated = torch.cuda.memory_allocated(0) / 1024**2  # MB
+            before_cached = torch.cuda.memory_reserved(0) / 1024**2  # MB
 
         # Track memory usage for this step
         mem_usage_start = memory_usage(-1, interval=0.1, timeout=0.1)
@@ -55,8 +52,8 @@ class Profiler:
 
             # Collect GPU metrics after the step
             if torch.cuda.is_available():
-                self.gpu_allocated.append(torch.cuda.memory_allocated() / 1024 ** 2)  # MB
-                self.gpu_cached.append(torch.cuda.memory_reserved() / 1024 ** 2)  # MB
+                self.gpu_allocated.append(torch.cuda.memory_allocated() / 1024**2)  # MB
+                self.gpu_cached.append(torch.cuda.memory_reserved() / 1024**2)  # MB
 
     def end_profiling(self, log_file="profiler_logs.log"):
         """End profiling and save aggregated results"""
@@ -74,13 +71,13 @@ class Profiler:
     def save(self, log_file="profiler_logs.log") -> None:
         # Generate profiling stats
         s = io.StringIO()
-        sortby = 'cumulative'
+        sortby = "cumulative"
         ps = pstats.Stats(self._profiler, stream=s).sort_stats(sortby)
         ps.print_stats(20)  # Top 20 functions
         stats_str = s.getvalue()
 
         # Generate report timestamp
-        timestamp = self.end_time.strftime('%Y%m%d_%H%M%S')
+        timestamp = self.end_time.strftime("%Y%m%d_%H%M%S")
 
         log_content = [
             f"\n{'=' * 50}",
@@ -88,29 +85,34 @@ class Profiler:
         ]
 
         if self.memory_usage:
-            log_content.extend([
-                f"\nMemory Usage Statistics:",
-                f"Mean Memory: {np.mean(self.memory_usage):.2f} MiB (std: {np.std(self.memory_usage):.2f} MiB)",
-                f"Max Memory: {np.max(self.memory_usage):.2f} MiB",
-            ])
+            log_content.extend(
+                [
+                    f"\nMemory Usage Statistics:",
+                    f"Mean Memory: {np.mean(self.memory_usage):.2f} MiB (std: {np.std(self.memory_usage):.2f} MiB)",
+                    f"Max Memory: {np.max(self.memory_usage):.2f} MiB",
+                ]
+            )
 
         if self.gpu_allocated:
-            log_content.extend([
-                f"\nGPU Memory Statistics:",
-                f"Mean Allocated: {np.mean(self.gpu_allocated):.2f} MB (std: {np.std(self.gpu_allocated):.2f} MB)",
-                f"Max Allocated: {np.max(self.gpu_allocated):.2f} MB",
-                f"Mean Cached: {np.mean(self.gpu_cached):.2f} MB (std: {np.std(self.gpu_cached):.2f} MB)",
-                f"Max Cached: {np.max(self.gpu_cached):.2f} MB",
-            ])
+            log_content.extend(
+                [
+                    f"\nGPU Memory Statistics:",
+                    f"Mean Allocated: {np.mean(self.gpu_allocated):.2f} MB (std: {np.std(self.gpu_allocated):.2f} MB)",
+                    f"Max Allocated: {np.max(self.gpu_allocated):.2f} MB",
+                    f"Mean Cached: {np.mean(self.gpu_cached):.2f} MB (std: {np.std(self.gpu_cached):.2f} MB)",
+                    f"Max Cached: {np.max(self.gpu_cached):.2f} MB",
+                ]
+            )
 
-        log_content.extend([
-            f"\nProfiling duration: {(self.end_time - self.start_time).total_seconds():.2f} seconds",
-            f"\nTop 20 function calls:\n",
-            stats_str,
-            f"{'=' * 50}\n"
-        ])
-
+        log_content.extend(
+            [
+                f"\nProfiling duration: {(self.end_time - self.start_time).total_seconds():.2f} seconds",
+                f"\nTop 20 function calls:\n",
+                stats_str,
+                f"{'=' * 50}\n",
+            ]
+        )
 
         # Save detailed profile output
-        with open(log_file, 'a') as f:
-            f.write('\n'.join(log_content))
+        with open(log_file, "a") as f:
+            f.write("\n".join(log_content))

@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Callable
 from tqdm import tqdm
 import torch
-import pandas as pd
 import numpy as np
 
 from .metrics import MetricLvl, Metric
