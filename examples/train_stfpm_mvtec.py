@@ -2,15 +2,15 @@
 import torch
 from torch.utils.data import DataLoader
 # Model imports
-from models.stfpm.stfpm import STFPM
-from utilities.custom_feature_extractor_trimmed import CustomFeatureExtractor
-from trainers.trainer_stfpm import TrainerSTFPM
+from moviad.models.stfpm.stfpm import STFPM
+from moviad.utilities.custom_feature_extractor_trimmed import CustomFeatureExtractor
+from moviad.trainers.trainer_stfpm import TrainerSTFPM
 # Dataset imports
-from datasets.mvtec.mvtec_dataset import MVTecDataset
-from utilities.configurations import TaskType, Split
+from moviad.datasets.mvtec.mvtec_dataset import MVTecDataset
+from moviad.utilities.configurations import TaskType, Split
 # Evaluation imports
-from utilities.evaluation.evaluator import Evaluator
-from utilities.evaluation.metrics import MetricLvl, RocAuc, F1, ProAuc
+from moviad.utilities.evaluation.evaluator import Evaluator
+from moviad.utilities.evaluation.metrics import MetricLvl, RocAuc, F1, ProAuc
 
 # === CONFIG ===
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

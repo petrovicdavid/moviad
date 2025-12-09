@@ -95,6 +95,15 @@ Please, before opening a pull request, execute the tests with the command, and a
 uv run pytest -v -s
 ```
 
+**Build Documentation**
+To build the documentation locally, use the following commands:
+
+```bash
+cd /home/borsattifr/code-files/moviad/docs
+
+uv run sphinx-build -b html . _build/html
+```
+
 
 ## Citations
 

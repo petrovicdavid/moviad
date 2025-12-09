@@ -1,12 +1,12 @@
 # Simple import test for utilities modules
 
 def test_import_utilities():
-    import utilities
-    import utilities.configurations
-    import utilities.custom_feature_extractor
-    import utilities.custom_feature_extractor_trimmed
-    import utilities.distances
-    import utilities.feature_extractor
-    import utilities.get_sizes
-    import utilities.model_size_comparison
-    import utilities.pil_image_utils
+    import moviad.utilities
+    import moviad.utilities.configurations
+    import moviad.utilities.custom_feature_extractor
+    import moviad.utilities.custom_feature_extractor_trimmed
+    import moviad.utilities.distances
+    import moviad.utilities.feature_extractor
+    import moviad.utilities.get_sizes
+    import moviad.utilities.model_size_comparison
+    import moviad.utilities.pil_image_utils

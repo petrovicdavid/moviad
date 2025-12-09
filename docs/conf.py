@@ -13,7 +13,7 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath("."))
+sys.path.insert(0, os.path.abspath("../src"))
 
 
 # -- Project information -----------------------------------------------------
@@ -33,8 +33,20 @@ release = "0.4"
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ["sphinx.ext.autosummary", "sphinx_rtd_theme", "sphinx.ext.autodoc"]
+extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.viewcode",
+    "sphinx_rtd_theme",
+]
 autosummary_generate = True  # Needed to auto-generate .rst
+autodoc_member_order = 'bysource'
+
+# Napoleon settings for Google and NumPy style docstrings
+napoleon_google_docstring = True
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

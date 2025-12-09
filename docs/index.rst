@@ -6,11 +6,14 @@
 Welcome to MoViAD's documentation!
 ==================================
 
+MoViAD (Mobile Visual Anomaly Detection) is a framework for training and deploying 
+anomaly detection models optimized for mobile and edge devices.
+
 .. toctree::
    :maxdepth: 2
-   :caption: API Reference
+   :caption: Contents:
 
-   moviad/index
+   api/modules
 
 
 Indices and tables
