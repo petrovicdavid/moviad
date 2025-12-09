@@ -160,7 +160,7 @@ class ProAuc(Metric):
 
     @property
     def name(self):
-        return f"pxl_au_pro"
+        return f"{MetricLvl.PIXEL.value}_au_pro"
 
     @staticmethod
     def rescale(x):

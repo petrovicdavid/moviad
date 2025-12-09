@@ -44,7 +44,9 @@ class Evaluator:
         Args:
             model: a model object on which you can call model.predict(batched_images)
                 and returns a tuple of anomaly_maps and anomaly_scores
-            output_path (str): path where to store the output masks
+            postprocess (Callable): a function to postprocess the predicted anomaly maps
+        Returns:
+            dict: a dictionary with metric names as keys and computed metric values as values
         """
         model.eval()
 
@@ -65,7 +67,7 @@ class Evaluator:
 
         pred_anom_map = postprocess(pred_anom_map)
 
-        report = []
+        report = {}
         for metric in self.metrics:
             if metric.level == MetricLvl.IMAGE:
                 pred = pred_anom_score
@@ -73,10 +75,9 @@ class Evaluator:
             elif metric.level == MetricLvl.PIXEL:
                 pred = pred_anom_map
                 gt = gt_mask
-            report.append({metric.name: metric.compute(gt, pred)})
+            report[metric.name] = metric.compute(gt, pred)
 
-        # return a pandas dataframe
-        return pd.DataFrame().from_records(report)
+        return report
 
 
 """
