@@ -99,7 +99,7 @@ uv run pytest -v -s
 To build the documentation locally, use the following commands:
 
 ```bash
-cd /home/borsattifr/code-files/moviad/docs
+cd code-files/moviad/docs
 
 uv run sphinx-build -b html . _build/html
 ```
