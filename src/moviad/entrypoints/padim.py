@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from dataclasses import dataclass
 
 from moviad.common.args import Args
-from moviad.datasets.iad_dataset import IadDataset
+from moviad.datasets.vad_dataset import IadDataset
 from moviad.entrypoints.common import load_datasets
 from moviad.models.padim.padim import Padim
 from moviad.trainers.trainer_padim import TrainerPadim

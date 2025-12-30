@@ -3,7 +3,7 @@
 def test_import_datasets():
     import moviad.datasets
     import moviad.datasets.builder
-    import moviad.datasets.iad_dataset
+    import moviad.datasets.vad_dataset
     import moviad.datasets.exceptions.exceptions
     import moviad.datasets.miic.miic_dataset
     import moviad.datasets.mvtec.mvtec_dataset

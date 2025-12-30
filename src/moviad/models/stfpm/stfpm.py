@@ -1,30 +1,38 @@
-from typing import List, Tuple
+from typing import List, Tuple, Callable
+from dataclasses import dataclass
+
 import torch
 import torch.nn.functional as F
+from tqdm import tqdm
 
 from moviad.utilities.custom_feature_extractor_trimmed import CustomFeatureExtractor
+from moviad.models.vad_model import VADModel
+from moviad.models.training_args import TrainingArgs
+from moviad.models.stfpm.loss_functions import stfpm_loss
 
-class STFPM(torch.nn.Module):
+@dataclass
+class STFPMTrainArgs(TrainingArgs):
 
-    DEFAULT_PARAMETERS = {
-        "epochs": 100,
-        "batch_size": 32,
-        "learning_rate": 0.4,
-        "weight_decay": 1e-4,
-        "momentum": 0.9,
-    }
+    def init_train(self, model: VADModel):
+        if self.optimizer is None:
+            self.optimizer = torch.optim.SGD(
+                model.parameters(), lr=0.4, weight_decay=1e-4, momentum=0.9
+            )
+        if self.loss_function is None:
+            self.loss_function = stfpm_loss
 
-    def __init__ (
+
+class STFPM(VADModel):
+    def __init__(
         self,
-        teacher:CustomFeatureExtractor,
-        student:CustomFeatureExtractor,
+        teacher: CustomFeatureExtractor,
+        student: CustomFeatureExtractor,
     ):
         super().__init__()
         self.teacher = teacher
         self.student = student
 
     def forward(self, batch: torch.Tensor):
-
         if self.training:
             teacher_features, student_features = None, None
             with torch.no_grad():
@@ -54,9 +62,37 @@ class STFPM(torch.nn.Module):
         self.student.model.eval()
         return super().eval(*args, **kwargs)
 
+    def parameters(self):
+        return self.student.model.parameters()
+
+    def train_epoch(
+        self, epoch, train_dataloader, device, training_args: STFPMTrainArgs
+    ):
+        self.train()
+        loss_function = training_args.loss_function
+
+        avg_batch_loss = 0
+
+        # train the model
+        for batch in tqdm(train_dataloader):
+            batch = batch.to(device)
+            teacher_features, student_features = self.forward(batch)
+
+            for i in range(len(student_features)):
+                teacher_features[i] = F.normalize(teacher_features[i], dim=1)
+                student_features[i] = F.normalize(student_features[i], dim=1)
+                loss = loss_function(teacher_features[i], student_features[i])
+
+            avg_batch_loss += loss.item()
+
+            training_args.optimizer.zero_grad()
+            loss.backward()
+            training_args.optimizer.step()
+
+        avg_batch_loss /= len(train_dataloader)
+        return avg_batch_loss
 
     def post_process(self, t_feat, s_feat, output_shape) -> torch.Tensor:
-
         """
         This method actually produces the anomaly maps for evalution purposes
 

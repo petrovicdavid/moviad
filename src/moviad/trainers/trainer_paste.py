@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from sklearn.model_selection import train_test_split
 
-from moviad.datasets.iad_dataset import IadDataset
+from moviad.datasets.vad_dataset import IadDataset
 from moviad.models.stfpm.stfpm import STFPM
 from moviad.datasets.mvtec.mvtec_dataset import MVTecDataset
 from moviad.datasets.miic.miic_dataset import MiicDataset, MiicDatasetConfig

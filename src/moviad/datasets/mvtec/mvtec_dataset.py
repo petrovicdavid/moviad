@@ -13,12 +13,11 @@ import pandas as pd
 from PIL import Image
 import torch
 from torchvision.transforms import transforms
-from torch.utils.data import Dataset
 
-from moviad.backbones.micronet.utils import compute_mask_contamination
-from moviad.datasets.iad_dataset import IadDataset
+from moviad.datasets.vad_dataset import VADDataset
 from moviad.datasets.exceptions.exceptions import DatasetTooSmallToContaminateException
 from moviad.utilities.configurations import TaskType, Split, LabelName
+from moviad.datasets.dataset_arguments import DatasetArguments
 
 IMG_EXTENSIONS = (".png", ".PNG")
 
@@ -40,25 +39,6 @@ CATEGORIES = (
     "zipper",
 )
 
-
-class MvtecClassEnum(Enum):
-    BOTTLE = "bottle"
-    CABLE = "cable"
-    CAPSULE = "capsule"
-    CARPET = "carpet"
-    GRID = "grid"
-    HAZELNUT = "hazelnut"
-    LEATHER = "leather"
-    METAL_NUT = "metal_nut"
-    PILL = "pill"
-    SCREW = "screw"
-    TILE = "tile"
-    TOOTHBRUSH = "toothbrush"
-    TRANSISTOR = "transistor"
-    WOOD = "wood"
-    ZIPPER = "zipper"
-
-
 IMG_SIZE = (3, 900, 900)
 
 """Create MVTec AD samples by parsing the MVTec AD data file structure.
@@ -71,96 +51,43 @@ IMG_SIZE = (3, 900, 900)
 """
 
 
-class MVTecDataset(IadDataset):
-    """MVTec dataset class.
-
-    Args:
-        task (TaskType): Task type, ``classification``, ``detection`` or ``segmentation``.
-        root (Path | str): Path to the root of the dataset.
-            Defaults to ``./datasets/MVTec``.
-        category (str): Sub-category of the dataset, e.g. 'bottle'
-            Defaults to ``bottle``.
-        transform (Transform, optional): Transforms that should be applied to the input images.
-            Defaults to ``None``.
-        split (str | Split | None): Split of the dataset, usually Split.TRAIN or Split.TEST
-            Defaults to ``None``
-
-    """
+class MVTecDataset(VADDataset):
+    """MVTec dataset class."""
 
     def __init__(
-            self,
-            task: TaskType,
-            root: str,
-            category: str,
-            split: Split,
-            norm: bool = True,
-            img_size=(224, 224),
-            gt_mask_size: Optional[tuple] = None,
-            preload_imgs: bool = True,
+        self,
+        dataset_arguments: DatasetArguments,
     ) -> None:
-        super(MVTecDataset)
+        super().__init__(
+            dataset_arguments
+        )
 
-        gt_mask_size = img_size if gt_mask_size is None else gt_mask_size
-
-        self.img_size = img_size
-        self.gt_mask_size = gt_mask_size
-
-        self.root_category = Path(root) / Path(category)
-        self.category = category
-        self.split = split
+        self.root_category = Path(self.dataset_arguments.dataset_path) / Path(self.dataset_arguments.category)
         self.samples: pd.DataFrame = None
-        self.preload_imgs = preload_imgs
 
-        if norm:
-            t_list = [
-                transforms.ToTensor(),
-                transforms.Resize(img_size, antialias=True),
-                transforms.Normalize(
-                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-                ),
-            ]
+        if self.dataset_arguments.image_transform_list:
+            self.transform_image = transforms.Compose(self.dataset_arguments.image_transform_list)
         else:
-            t_list = [
-                transforms.ToTensor(),
-                transforms.Resize(img_size, antialias=True),
-            ]
-
-        self.transform_image = transforms.Compose(t_list)
+            self.transform_image = transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                    transforms.Resize(self.dataset_arguments.img_size, antialias=True),
+                ]
+            )
 
         self.transform_mask = transforms.Compose(
             [
                 transforms.ToTensor(),
                 transforms.Resize(
-                    gt_mask_size,
+                    self.dataset_arguments.gt_mask_size,
                     antialias=True,
                     interpolation=InterpolationMode.NEAREST,
                 ),
             ]
         )
 
-    def compute_contamination_ratio(self) -> float:
-        if self.samples is None:
-            raise ValueError("Dataset is not loaded")
-
-        contaminated_samples = self.samples[self.samples["label_index"] == LabelName.ABNORMAL.value]
-        if contaminated_samples.empty:
-            return 0
-
-        total_contamination_ratio = 0
-        for index, row in contaminated_samples.iterrows():
-            if not Path(row["mask_path"]).exists():
-                raise ValueError("Mask file does not exist")
-
-            mask = Image.open(row["mask_path"]).convert("L")
-            mask = self.transform_mask(mask)
-            total_contamination_ratio += compute_mask_contamination(mask)
-        return total_contamination_ratio / len(contaminated_samples)
-
     def is_loaded(self) -> bool:
         return self.samples is not None
-
-    def contains(self, item) -> bool:
-        return self.samples['image_path'].eq(item['image_path']).any()
 
     def load_dataset(self):
         if self.is_loaded():
@@ -199,7 +126,7 @@ class MVTecDataset(IadDataset):
         samples.loc[(samples.label != "good"), "label_index"] = LabelName.ABNORMAL
         samples.label_index = samples.label_index.astype(int)
 
-        if self.split == Split.TEST:
+        if self.dataset_arguments.split == Split.TEST:
 
             # separate masks from samples
             mask_samples = samples.loc[samples.split == "ground_truth"].sort_values(
@@ -229,20 +156,16 @@ class MVTecDataset(IadDataset):
                 anomalous images in the dataset (e.g. image: '000.png', mask: '000.png' or '000_mask.png')."""
                 raise Exception(msg)
 
-        self.samples = samples[samples.split == self.split].reset_index(drop=True)
-        if self.preload_imgs:
-            self.data = [
-                self.transform_image(
-                    Image.open(self.samples.iloc[index].image_path).convert("RGB")
-                )
-                for index in range(len(self.samples))
-            ]
+        self.samples = samples[samples.split == self.dataset_arguments.split].reset_index(drop=True)
+
+        # if not self.use_original_splits:
+        #     self.dataset_arguments.split_dataset(train_size=0.7, valid_size=0.2)
 
     def __len__(self) -> int:
         return len(self.samples)
 
-    def contaminate(self, source: 'IadDataset', ratio: float, seed: int = 42) -> int:
-        if type(source) != MVTecDataset:
+    def contaminate(self, source: VADDataset, ratio: float, seed: int = 42) -> int:
+        if type(source) is not MVTecDataset:
             raise ValueError("Dataset should be of type MVTecDataset")
         if self.samples is None:
             raise ValueError("Destination dataset is not loaded")
@@ -292,15 +215,15 @@ class MVTecDataset(IadDataset):
             path (str) : path of the input image
         """
 
-        # open the image and get the tensor
-        if self.preload_imgs:
-            image = self.data[index]
-        else:
-            image = self.transform_image(
-                Image.open(self.samples.iloc[index].image_path).convert("RGB")
-            )
+        if self.samples is None:
+            self.load_dataset()
 
-        if self.split == Split.TRAIN:
+        # open the image and get the tensor
+        image = self.transform_image(
+            Image.open(self.samples.iloc[index].image_path).convert("RGB")
+        )
+
+        if self.dataset_arguments.split == Split.TRAIN:
             return image
         else:
             # return also the label, the mask and the path

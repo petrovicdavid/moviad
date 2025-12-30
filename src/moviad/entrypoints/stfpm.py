@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 
 from moviad.common.args import Args
 from moviad.models.stfpm.stfpm import STFPM
-from moviad.datasets.iad_dataset import IadDataset
+from moviad.datasets.vad_dataset import IadDataset
 from moviad.entrypoints.common import load_datasets
 from moviad.trainers.trainer_paste import train_param_grid_search
 from moviad.utilities.evaluation.evaluator import Evaluator

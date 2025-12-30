@@ -24,6 +24,16 @@ class TaskType(str, Enum):
 class Split(str, Enum):
     """Dataset split"""
 
+    # def __init__(self, perc: float | int | None =None):
+    #     """
+    #     perc: int = number of samples in this split
+
+    #     TODO:
+    #     VadDataset(split=[Split(0.1).TEST, Split(0.2).VALIDATION, Split(0.7).TRAIN])
+    #     """
+    #     super().__init__()
+    #     self.perc = perc
+
     TRAIN = "train"
     VALID = "valid"
     TEST = "test"
@@ -33,5 +43,3 @@ class LabelName(int, Enum):
 
     NORMAL = 0
     ABNORMAL = 1
-
-    

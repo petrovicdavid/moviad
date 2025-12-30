@@ -28,17 +28,8 @@ class Evaluator:
         device (torch.device): device where to run the model
     """
 
-    def __init__(self, dataloader, metrics: list[Metric], device):
-        """
-        Args:
-            dataloader (Dataloader): dataloader on which to compute the metrics
-            device (torch.device): device where to run the model
-        """
-        self.dataloader = dataloader
-        self.metrics = metrics
-        self.device = device
 
-    def evaluate(self, model, postprocess: Callable = min_max_norm):
+    def evaluate(self, model, dataloader, metrics: list[Metric], device, postprocess: Callable = min_max_norm) -> dict:
         """
         Args:
             model: a model object on which you can call model.predict(batched_images)
@@ -78,21 +69,3 @@ class Evaluator:
 
         return report
 
-
-"""
-Usage example:
-
-from moviad.utilities.evaluation.metrics import MetricLvl, SimpleMetric, RocAuc
-
-# import average precision from sklearn
-from sklearn.metrics import average_precision_score
-
-evaluator = Evaluator(
-    dataloader=None,
-    metrics=[
-        SimpleMetric("avg_prec", average_precision_score, MetricLvl.IMAGE),
-        RocAuc(MetricLvl.IMAGE),
-    ],
-    device=None,
-)
-"""
