@@ -53,13 +53,20 @@ class Trainer:
     def print_metrics(metrics):
         print("\n".join([f"{k}: {v}" for k, v in metrics.items()]))
 
+    def save_model(self, best_metrics, results):
+        if self.saving_criteria and self.saving_criteria(best_metrics, results) and self.save_path is not None:
+            print("Saving model...")
+            torch.save(self.model.state_dict(), self.save_path)
+            print(f"Model saved to {self.save_path}")
 
     def train(self):
 
         self.train_args.init_train(self.model)
-        best_metrics = {metric.name: 0.0 for metric in self.evaluator.metrics}
+        best_metrics = {metric.name: 0.0 for metric in self.metrics}
 
         for epoch in range(self.train_args.epochs):
+
+            self.model.train()
 
             print(f"EPOCH: {epoch}")
 
@@ -71,20 +78,18 @@ class Trainer:
                     "avg_batch_loss": avg_batch_loss
                 })
 
-            if (epoch + 1) % self.train_args.evaluation_epoch_interval == 0 and epoch != 0:
+            if (epoch + 1) % self.train_args.evaluation_epoch_interval == 0:
                 print("Evaluating model...")
-                metrics = Evaluator.evaluate(self.model, self.eval_dataloader, self.metrics, self.device)
+                results = Evaluator.evaluate(self.model, self.eval_dataloader, self.metrics, self.device)
 
-                if self.saving_criteria(best_metrics, metrics) and self.save_path is not None:
-                    print("Saving model...")
-                    torch.save(self.model.state_dict(), self.save_path)
-                    print(f"Model saved to {self.save_path}")
+                # save the model if needed
+                self.save_model(best_metrics, results)
 
                 # update the best metrics
-                best_metrics = Trainer.update_best_metrics(best_metrics, metrics)
+                best_metrics = Trainer.update_best_metrics(best_metrics, results)
 
                 print("Trainer training performances:")
-                Trainer.print_metrics(metrics)
+                Trainer.print_metrics(results)
 
                 if self.logger is not None:
                     self.logger.log(best_metrics)

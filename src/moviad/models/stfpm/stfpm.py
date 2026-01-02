@@ -52,10 +52,10 @@ class STFPM(VADModel):
     def __call__(self, batch: torch.Tensor):
         return self.forward(batch)
 
-    def train(self, *args, **kwargs):
+    def train(self, mode: bool = True):
         self.teacher.model.eval()
-        self.student.model.train()
-        return super().train(*args, **kwargs)
+        self.student.model.train(mode)
+        return super().train(mode)
 
     def eval(self, *args, **kwargs):
         self.teacher.model.eval()
@@ -68,7 +68,6 @@ class STFPM(VADModel):
     def train_epoch(
         self, epoch, train_dataloader, device, training_args: STFPMTrainArgs
     ):
-        self.train()
         loss_function = training_args.loss_function
 
         avg_batch_loss = 0

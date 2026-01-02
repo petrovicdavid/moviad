@@ -12,12 +12,6 @@ def min_max_norm(x):
     return (x - x.min()) / (x.max() - x.min())
 
 
-def append(prev, new, dtype=None, to_numpy=True):
-    new = new.cpu().numpy() if to_numpy else new
-    new = new.astype(dtype) if dtype else new
-    return np.concatenate((prev, new), axis=0)
-
-
 class Evaluator:
     """
     This class will evaluate the trained model on the test set
@@ -28,8 +22,8 @@ class Evaluator:
         device (torch.device): device where to run the model
     """
 
-
-    def evaluate(self, model, dataloader, metrics: list[Metric], device, postprocess: Callable = min_max_norm) -> dict:
+    @staticmethod
+    def evaluate(model, dataloader, metrics: list[Metric], device, postprocess: Callable = min_max_norm) -> dict:
         """
         Args:
             model: a model object on which you can call model.predict(batched_images)
@@ -40,31 +34,29 @@ class Evaluator:
         """
         model.eval()
 
-        # Initialize results as numpy arrays
-        def init(*t):
-            return tuple(np.empty((0,), dtype=t_) for t_ in t)
-        gt_mask, gt_label, pred_anom_map, pred_anom_score = init(int, *(float,) * 3)
+        gt_mask, gt_label, pred_anom_map, pred_anom_score = [], [], [], []
 
-        for image, label, mask, path in tqdm(self.dataloader, desc="Eval"):
-            with torch.no_grad():  # get anomaly map and score
-                anom_maps, anom_scores = model(image.to(self.device))
+        for image, label, mask, path in tqdm(dataloader, desc="Eval"):
+            with torch.no_grad():
+                anom_maps, anom_scores = model(image.to(device))
 
-            # Append ground truth, anomaly scores, and predicted masks
-            gt_mask = append(gt_mask, mask, dtype=int)
-            gt_label = append(gt_label, label)
-            pred_anom_map = append(pred_anom_map, anom_maps)
-            pred_anom_score = append(pred_anom_score, anom_scores)
+            gt_mask.append(mask.cpu().numpy().astype(int))
+            gt_label.append(label.cpu().numpy())
+            pred_anom_map.append(anom_maps.cpu().numpy())
+            pred_anom_score.append(anom_scores.cpu().numpy())
 
-        pred_anom_map = postprocess(pred_anom_map)
-
+        gt_mask = np.concatenate(gt_mask)
+        gt_label = np.concatenate(gt_label)
+        pred_anom_map = postprocess(np.concatenate(pred_anom_map))
+        pred_anom_score = np.concatenate(pred_anom_score)
+        
         report = {}
-        for metric in self.metrics:
+        for metric in metrics:
             if metric.level == MetricLvl.IMAGE:
-                pred = pred_anom_score
-                gt = gt_label
-            elif metric.level == MetricLvl.PIXEL:
-                pred = pred_anom_map
-                gt = gt_mask
+                gt, pred = gt_label, pred_anom_score
+            else:
+                gt, pred = gt_mask, pred_anom_map
+
             report[metric.name] = metric.compute(gt, pred)
 
         return report

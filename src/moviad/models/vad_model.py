@@ -12,12 +12,6 @@ class VADModel(nn.Module):
     def __call__(self, batch: torch.Tensor):
         self.forward(batch)
 
-    @abstractmethod
-    def train(self, *args, **kwargs): ...
-
-    @abstractmethod
-    def eval(self, *args, **kwargs): ...
-
     def parameters(self): ...
 
     @abstractmethod

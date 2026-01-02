@@ -234,6 +234,6 @@ class MVTecDataset(VADDataset):
                 mask = self.transform_mask(mask)
 
             else:
-                mask = torch.zeros(1, *self.gt_mask_size)
+                mask = torch.zeros(1, *self.dataset_arguments.img_size)
 
             return image, label, mask.int(), path

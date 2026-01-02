@@ -173,6 +173,12 @@ class ProAuc(Metric):
         # remove the channel dimension
         gt = np.squeeze(gt, axis=1)
 
+        if pred.shape[1] == 1:
+            pred = np.squeeze(pred, axis=1)
+        
+        if pred.shape != gt.shape:
+            raise ValueError("Ground truth and prediction must have the same shape.")
+
         gt[gt <= 0.5] = 0
         gt[gt > 0.5] = 1
         gt = gt.astype(np.bool_)

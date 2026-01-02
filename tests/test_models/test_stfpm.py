@@ -3,8 +3,9 @@ def test_model_create_train():
     from moviad.models.stfpm.stfpm import STFPM, STFPMTrainArgs
     from moviad.trainers.trainer import Trainer
     from moviad.datasets.mvtec import MVTecDataset
+    from torch.utils.data import Subset
     from moviad.datasets.dataset_arguments import DatasetArguments
-    from moviad.utilities.evaluation.metrics import RocAuc
+    from moviad.utilities.evaluation.metrics import MetricLvl, RocAuc, AvgPrec, F1, ProAuc
     import torch
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -22,13 +23,14 @@ def test_model_create_train():
     }
     train_dataset = MVTecDataset(DatasetArguments(**args))
     train_dataset.load_dataset()
+    train_dataset = Subset(train_dataset, list(range(0, 10)))  # use a subset for faster testing
 
     args["split"] = "test"
     test_dataset = MVTecDataset(DatasetArguments(**args))
     test_dataset.load_dataset()
 
     model = STFPM(teacher, student).to(device)
-    training_args = STFPMTrainArgs(epochs=1, batch_size=4)
+    training_args = STFPMTrainArgs(epochs=2, batch_size=4)
     training_args.init_train(model)
 
     trainer = Trainer(
@@ -36,20 +38,27 @@ def test_model_create_train():
         model,
         train_dataset,
         test_dataset,
-        metrics=[RocAuc],
+        metrics=[
+            RocAuc(MetricLvl.IMAGE),
+            RocAuc(MetricLvl.PIXEL),
+            AvgPrec(MetricLvl.IMAGE),
+            AvgPrec(MetricLvl.PIXEL),
+            F1(MetricLvl.IMAGE),
+            F1(MetricLvl.PIXEL),
+            ProAuc(MetricLvl.PIXEL),
+        ],
         device=device,
         logger=None,
         save_path=None,
         saving_criteria=None,
     )
 
-    print(trainer.train_dataloader)
-
-    # assert minimo: almeno un parametro è aggiornato
+    # check for parameter updates
     params_before = [p.clone() for p in model.student.model.parameters()]
     trainer.train()
     params_after = [p for p in model.student.model.parameters()]
     assert any(not torch.equal(b, a) for b, a in zip(params_before, params_after))
+
 
 
                                                      

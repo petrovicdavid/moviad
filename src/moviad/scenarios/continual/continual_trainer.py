@@ -2,14 +2,13 @@ import torch
 
 from moviad.scenarios.continual.continual_dataset import ContinualDataset
 from moviad.scenarios.continual.continual_model import ContinualModel
-from moviad.scenarios.continual import ContinualTrainingArguments
 from moviad.models.training_args import TrainingArgs
 from moviad.utilities.evaluation.evaluator import Evaluator
 from moviad.utilities.evaluation.metrics import Metric
 
 class ContinualTrainer:
 
-    def __init__(self, continual_dataset: ContinualDataset, model: ContinualModel, device, metrics: list[Metric], training_args: ContinualTrainingArguments | TrainingArgs):
+    def __init__(self, continual_dataset: ContinualDataset, model: ContinualModel, device, metrics: list[Metric], training_args: TrainingArgs):
         """
         Args:
             continual_dataset (ContinualDataset): continual dataset to be used for training

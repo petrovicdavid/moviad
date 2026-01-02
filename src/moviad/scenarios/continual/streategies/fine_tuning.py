@@ -7,16 +7,16 @@ from tqdm import trange
 
 class FineTuning(ContinualModel):
 
-    def __init__(self, model: VADModel):
-        super().__init__(model)
+    def __init__(self, model: VADModel, train_args: TrainingArgs):
+        super().__init__(model, train_args)
 
-    def start_task(self, train_args):
+    def start_task(self):
         pass
 
-    def train_task(self, train_dataset, test_dataset, metrics, train_args: TrainingArgs, device, logger):
+    def train_task(self, train_dataset, test_dataset, metrics, device, logger):
 
         trainer = Trainer(
-            train_args,
+            self.train_args,
             self.model,
             train_dataset,
             test_dataset,
