@@ -57,12 +57,17 @@ class MVTecDataset(VADDataset):
     def __init__(
         self,
         dataset_arguments: DatasetArguments,
+        category: str,
+        split: Split | list[Split]
     ) -> None:
+        
         super().__init__(
-            dataset_arguments
+            dataset_arguments,
+            category,
+            split
         )
 
-        self.root_category = Path(self.dataset_arguments.dataset_path) / Path(self.dataset_arguments.category)
+        self.root_category = Path(self.dataset_arguments.dataset_path) / Path(self.category)
         self.samples: pd.DataFrame = None
 
         if self.dataset_arguments.image_transform_list:
@@ -85,6 +90,8 @@ class MVTecDataset(VADDataset):
                 ),
             ]
         )
+
+        self.load_dataset()
 
     def is_loaded(self) -> bool:
         return self.samples is not None
@@ -126,7 +133,7 @@ class MVTecDataset(VADDataset):
         samples.loc[(samples.label != "good"), "label_index"] = LabelName.ABNORMAL
         samples.label_index = samples.label_index.astype(int)
 
-        if self.dataset_arguments.split == Split.TEST:
+        if self.split == Split.TEST:
 
             # separate masks from samples
             mask_samples = samples.loc[samples.split == "ground_truth"].sort_values(
@@ -156,10 +163,10 @@ class MVTecDataset(VADDataset):
                 anomalous images in the dataset (e.g. image: '000.png', mask: '000.png' or '000_mask.png')."""
                 raise Exception(msg)
 
-        self.samples = samples[samples.split == self.dataset_arguments.split].reset_index(drop=True)
+        self.samples = samples[samples.split == self.split].reset_index(drop=True)
 
         # if not self.use_original_splits:
-        #     self.dataset_arguments.split_dataset(train_size=0.7, valid_size=0.2)
+        #     self.split_dataset(train_size=0.7, valid_size=0.2)
 
     def __len__(self) -> int:
         return len(self.samples)
@@ -223,7 +230,7 @@ class MVTecDataset(VADDataset):
             Image.open(self.samples.iloc[index].image_path).convert("RGB")
         )
 
-        if self.dataset_arguments.split == Split.TRAIN:
+        if self.split == Split.TRAIN:
             return image
         else:
             # return also the label, the mask and the path
@@ -237,3 +244,7 @@ class MVTecDataset(VADDataset):
                 mask = torch.zeros(1, *self.dataset_arguments.img_size)
 
             return image, label, mask.int(), path
+
+    @staticmethod
+    def get_categories() -> list:
+        return list(CATEGORIES)

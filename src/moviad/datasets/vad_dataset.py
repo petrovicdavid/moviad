@@ -20,9 +20,13 @@ class VADDataset(Dataset):
 
     def __init__(
         self,
-        arguments: DatasetArguments
+        arguments: DatasetArguments,
+        category: str,
+        split: Split | list[Split]
     ):
         self.dataset_arguments = arguments
+        self.category = category
+        self.split = split
 
     @abstractmethod
     def load_dataset(self): ...

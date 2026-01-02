@@ -18,25 +18,30 @@ class Trainer:
         eval_dataset: VADDataset | None,
         metrics: list[Metric],
         device: torch.device,
-        logger: Any,
+        logger: Any | None = None,
+        logging_prefix: str = None,
         save_path: str | None = None,
         saving_criteria: Callable | None = None,
     ):
         self.model = model
+        
         self.train_dataloader = torch.utils.data.DataLoader(
             train_dataset,
             batch_size=train_args.batch_size,
             shuffle=True,
             num_workers=4   
         )
+        
         self.eval_dataloader = torch.utils.data.DataLoader(
             eval_dataset,
             batch_size=train_args.batch_size,
             shuffle=False,
             num_workers=4
         ) if eval_dataset is not None else None
+
         self.device = device
         self.logger = logger
+        self.logging_prefix = logging_prefix
         self.save_path = save_path
         self.saving_criteria = saving_criteria
         self.train_args = train_args
@@ -74,8 +79,8 @@ class Trainer:
 
             if self.logger:
                 self.logger.log({
-                    "current_epoch" : epoch,
-                    "avg_batch_loss": avg_batch_loss
+                    f"{self.logging_prefix}epoch" : epoch,
+                    f"{self.logging_prefix}train_loss" : avg_batch_loss
                 })
 
             if (epoch + 1) % self.train_args.evaluation_epoch_interval == 0:
@@ -88,8 +93,11 @@ class Trainer:
                 # update the best metrics
                 best_metrics = Trainer.update_best_metrics(best_metrics, results)
 
-                print("Trainer training performances:")
+                print("Training performances:")
                 Trainer.print_metrics(results)
 
                 if self.logger is not None:
-                    self.logger.log(best_metrics)
+                    if self.logging_prefix is not None:
+                        self.logger.log({
+                            f"{self.logging_prefix}train/{metric_name}": value for metric_name, value in results.items()
+                        })

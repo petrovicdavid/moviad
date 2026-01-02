@@ -1,7 +1,9 @@
-def test_model_create_train():
+def test_stfpm_fine_tuning():
     from moviad.utilities.custom_feature_extractor_trimmed import CustomFeatureExtractor
     from moviad.models.stfpm.stfpm import STFPM, STFPMTrainArgs
-    from moviad.trainers.trainer import Trainer
+    from moviad.scenarios.continual.continual_trainer import ContinualTrainer
+    from moviad.scenarios.continual.continual_dataset import ContinualDataset
+    from moviad.scenarios.continual.strategies.fine_tuning import FineTuning
     from moviad.datasets.mvtec import MVTecDataset
     from torch.utils.data import Subset
     from moviad.datasets.dataset_arguments import DatasetArguments
@@ -12,30 +14,26 @@ def test_model_create_train():
 
     teacher = CustomFeatureExtractor("wide_resnet50_2", ["layer1", "layer2", "layer3"], device, frozen=True)    
     student = CustomFeatureExtractor("wide_resnet50_2", ["layer1", "layer2", "layer3"], device, frozen=False)
+    model = STFPM(teacher, student).to(device)
 
     args = {
         "dataset_path" : "/mnt/mydisk/manuel_barusco/datasets/mvtec",
-        "category" : "bottle",
-        "split" : "train",
         "img_size" : (256, 256),
         "gt_mask_size" : (256, 256),
         "image_transform_list" : None
     }
-    train_dataset = MVTecDataset(DatasetArguments(**args))
-    train_dataset = Subset(train_dataset, list(range(0, 10)))  # use a subset for faster testing
 
-    args["split"] = "test"
-    test_dataset = MVTecDataset(DatasetArguments(**args))
+    continual_dataset = ContinualDataset(
+        DatasetArguments(**args),
+        MVTecDataset
+    )
 
-    model = STFPM(teacher, student).to(device)
-    training_args = STFPMTrainArgs(epochs=2, batch_size=4)
-    training_args.init_train(model)
+    continual_model = FineTuning(model)
 
-    trainer = Trainer(
-        training_args,
-        model,
-        train_dataset,
-        test_dataset,
+    trainer = ContinualTrainer(
+        continual_dataset,
+        continual_model,
+        device,
         metrics=[
             RocAuc(MetricLvl.IMAGE),
             RocAuc(MetricLvl.PIXEL),
@@ -45,10 +43,8 @@ def test_model_create_train():
             F1(MetricLvl.PIXEL),
             ProAuc(MetricLvl.PIXEL),
         ],
-        device=device,
-        logger=None,
-        save_path=None,
-        saving_criteria=None,
+        training_args=STFPMTrainArgs(epochs=2, batch_size=4),
+        logger=None
     )
 
     # check for parameter updates
@@ -56,7 +52,3 @@ def test_model_create_train():
     trainer.train()
     params_after = [p for p in model.student.model.parameters()]
     assert any(not torch.equal(b, a) for b, a in zip(params_before, params_after))
-
-
-
-                                                     

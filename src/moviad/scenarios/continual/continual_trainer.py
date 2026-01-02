@@ -8,7 +8,14 @@ from moviad.utilities.evaluation.metrics import Metric
 
 class ContinualTrainer:
 
-    def __init__(self, continual_dataset: ContinualDataset, model: ContinualModel, device, metrics: list[Metric], training_args: TrainingArgs):
+    def __init__(self, 
+                 continual_dataset: ContinualDataset, 
+                 model: ContinualModel, 
+                 device, 
+                 metrics: list[Metric], 
+                 training_args: TrainingArgs,
+                 logger: any = None
+            ):
         """
         Args:
             continual_dataset (ContinualDataset): continual dataset to be used for training
@@ -20,24 +27,31 @@ class ContinualTrainer:
         self.trainer_arguments = training_args
         self.metrics = metrics
         self.device = device
+        self.logger = logger
 
     
     def train(self):
 
         for task_index in range(len(self.continual_dataset)):
+            print(f"Training for task: {task_index} , {self.continual_dataset.get_task_category(task_index)}")
+
             train_dataset, test_dataset = self.continual_dataset.get_task_data(task_index)
 
             self.model.start_task()
 
             self.model.train_task(
+                task_index=task_index,
                 train_dataset=train_dataset,
                 test_dataset=test_dataset,
-                metrics=self.metrics,
                 train_args=self.trainer_arguments,
+                metrics=self.metrics,
                 device=self.device,
+                logger=self.logger,
             )
 
             self.model.end_task()
+
+            summary_metrics = { metric.name: [] for metric in self.metrics }
 
             previous_tasks_index = self.continual_dataset.get_previous_tasks(task_index)
 
@@ -49,4 +63,34 @@ class ContinualTrainer:
                     shuffle=False,
                     num_workers=4
                 )
-                Evaluator.evaluate(self.model, eval_dataloader, self.metrics, device=self.device)
+                results = Evaluator.evaluate(self.model.vad_model, eval_dataloader, self.metrics, device=self.device)
+
+                # update summary metrics
+                for metric in summary_metrics.keys():
+                    summary_metrics[metric].append(results[metric])
+
+                # log metrics for the current task
+                if self.logger:
+                    self.logger.log(
+                        {
+                            f"Task_T{task_index}/eval/{metric}": results[metric] for metric in results.keys()
+                        }
+                    )
+
+            print(f"Summary metrics after training on task {task_index}:")
+            for metric_name, values in summary_metrics.items():
+                avg_value = sum(values) / len(values)
+                summary_metrics[metric_name] = avg_value
+                print(f"Average {metric_name}: {avg_value}")
+
+            if self.logger:
+                self.logger.log(
+                    {
+                        f"Summary/{metric}": summary_metrics[metric] for metric in summary_metrics.keys()
+                    }
+                )
+
+            
+
+            
+

@@ -12,7 +12,6 @@ def test_mvtec_train_creation_load_sizes():
     )
 
     dataset = MVTecDataset(args)
-    dataset.load_dataset()
     assert dataset.is_loaded()
     assert len(dataset) > 0
     assert dataset[0].shape == (3, 256, 256)
@@ -32,7 +31,6 @@ def test_mvtec_test_creation_load_sizes():
     )
 
     dataset = MVTecDataset(args)
-    dataset.load_dataset()
     assert dataset.is_loaded()
     assert len(dataset) > 0
     assert dataset[0][0].shape == (3, 256, 256)

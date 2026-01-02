@@ -5,6 +5,8 @@ import numpy as np
 import torch
 from typing import Tuple
 
+from dataclasses import replace
+
 from moviad.datasets.dataset_arguments import DatasetArguments
 from moviad.datasets.vad_dataset import VADDataset
 from moviad.utilities.configurations import Split
@@ -48,8 +50,8 @@ class ContinualDataset:
             1: test dataloader
         """
 
-        train_dataset = self.dataset_class(self.dataset_arguments.update(category=self.categories[task_index], split=Split.TRAIN))
-        test_dataset = self.dataset_class(self.dataset_arguments.update(category=self.categories[task_index], split=Split.TEST))
+        train_dataset = self.dataset_class(self.dataset_arguments, category=self.categories[task_index], split=Split.TRAIN)
+        test_dataset = self.dataset_class(self.dataset_arguments, category=self.categories[task_index], split=Split.TEST)
 
         return train_dataset, test_dataset
 
@@ -68,7 +70,7 @@ class ContinualDataset:
         - torch.utils.data.DataLoader: test dataloader for the given task
         """
 
-        test_dataset = self.dataset_class(self.dataset_arguments.update(category=self.categories[task_index], split=Split.TEST))
+        test_dataset = self.dataset_class(self.dataset_arguments, category=self.categories[task_index], split=Split.TEST)
 
         return test_dataset 
 
@@ -85,18 +87,19 @@ class ContinualDataset:
         all_datasets_train = []
         all_datasets_test = []
         for category in self.categories:
-            train_dataset = self.dataset_class(self.dataset_arguments.update(category=category, split=Split.TRAIN))
-            train_dataset.load_dataset()
+
+            train_dataset = self.dataset_class(self.dataset_arguments, category=category, split=Split.TRAIN)
             all_datasets_train.append(train_dataset)
 
-            test_dataset = self.dataset_class(self.dataset_arguments.update(category=category, split=Split.TEST))
-            test_dataset.load_dataset()
+            test_dataset = self.dataset_class(self.dataset_arguments, category=category, split=Split.TEST)
             all_datasets_test.append(test_dataset)
 
         train_dataset = torch.utils.data.ConcatDataset(all_datasets_train)
         test_dataset = torch.utils.data.ConcatDataset(all_datasets_test)
         return train_dataset, test_dataset
 
-
     def get_previous_tasks(self, task_index):
         return range(len(self.categories))[:task_index+1]
+    
+    def get_task_category(self, task_index):
+        return self.categories[task_index]
