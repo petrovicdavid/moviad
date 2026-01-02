@@ -16,3 +16,6 @@ class VADModel(nn.Module):
 
     @abstractmethod
     def train_epoch(self, epoch: int, train_dataloader: torch.utils.data.DataLoader, device: torch.device, training_args: TrainingArgs): ...
+
+    @abstractmethod
+    def train_step(self, batch: torch.Tensor, device: torch.device, training_args: TrainingArgs): ...

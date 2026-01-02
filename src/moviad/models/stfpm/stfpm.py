@@ -91,6 +91,21 @@ class STFPM(VADModel):
         avg_batch_loss /= len(train_dataloader)
         return avg_batch_loss
 
+    def train_step(self, batch: torch.Tensor, device, training_args: TrainingArgs):
+        batch = batch.to(device)
+        teacher_features, student_features = self.forward(batch)
+
+        for i in range(len(student_features)):
+            teacher_features[i] = F.normalize(teacher_features[i], dim=1)
+            student_features[i] = F.normalize(student_features[i], dim=1)
+            loss = training_args.loss_function(teacher_features[i], student_features[i])
+
+        training_args.optimizer.zero_grad()
+        loss.backward()
+        training_args.optimizer.step()
+
+        return loss.item()
+
     def post_process(self, t_feat, s_feat, output_shape) -> torch.Tensor:
         """
         This method actually produces the anomaly maps for evalution purposes
