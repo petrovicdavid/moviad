@@ -27,7 +27,6 @@ class PatchCore(VADModel):
 
     def __init__(
         self,
-        device:torch.device,
         feature_extractor: CustomFeatureExtractor,
         coreset_extractor: CoresetExtractor = None,
         num_neighbors: int = 9,
@@ -48,7 +47,7 @@ class PatchCore(VADModel):
         super().__init__()
 
         self.num_neighbors = num_neighbors
-        self.device = device
+        self.device = torch.device("cpu")
 
         self.feature_extractor = feature_extractor
         self.feature_pooler = torch.nn.AvgPool2d(3,1,1)
@@ -61,14 +60,14 @@ class PatchCore(VADModel):
             self.product_quantizer = ProductQuantizer()
 
         if coreset_extractor is None:
-            self.coreset_extractor = CoresetExtractor(False, self.device, k=self.model.k)
+            self.coreset_extractor = CoresetExtractor(False, self.device, k=self.memory_bank_size)
         else:
             self.coreset_extractor = coreset_extractor
 
     def to(self, device: torch.device):
         super().to(device)
-        self.memory_bank.to(device)
         self.feature_extractor.to(device)
+        self.device = device
 
     def forward(self, input_tensor: Tensor) -> Tensor | dict[str, Tensor]:
         """Return Embedding during training, or a tuple of anomaly map and anomaly score during testing.
@@ -86,8 +85,12 @@ class PatchCore(VADModel):
                 anomaly map and anomaly score for testing.
         """
 
+        image_size = input_tensor.shape[2:]
+
         #extract the features for the input tensor
-        self.memory_bank.to(self.device)
+        if hasattr(self, "memory_bank"):
+            self.memory_bank.to(self.device)
+
         with torch.no_grad():
             features = self.feature_extractor(input_tensor.to(self.device))
 
@@ -117,19 +120,16 @@ class PatchCore(VADModel):
         #embedding shape: (#num_patches, emb_dim)
 
         if self.training:
-            output = embedding
+            return embedding
         else:
-            anomaly_maps, pred_scores = self.calculate_anomaly_maps_scores(
+            return self.calculate_anomaly_maps_scores(
                 embedding=embedding,
                 batch_size=batch_size,
                 width=width,
                 height=height,
+                image_size=image_size,
                 memory_bank=self.memory_bank
             )
-
-            output = (anomaly_maps, pred_scores)
-
-        return output
 
     def calculate_anomaly_maps_scores(
         self,
@@ -137,7 +137,8 @@ class PatchCore(VADModel):
         memory_bank: Tensor,
         batch_size: int,
         width: int,
-        height: int
+        height: int,
+        image_size: tuple,
     ) -> tuple[Tensor, Tensor]:
         
         if self.feature_extractor.quantized:
@@ -163,12 +164,12 @@ class PatchCore(VADModel):
         patch_scores = patch_scores.reshape((batch_size, 1, width, height))
 
         # get the anomaly map
-        anomaly_maps = self.anomaly_map_generator(patch_scores, image_size = self.input_size)
+        anomaly_maps = self.anomaly_map_generator(patch_scores, image_size = image_size)
 
         return anomaly_maps, pred_scores
 
     def train_epoch(
-        self, epoch, train_dataloader, device, training_args: TrainingArgs
+        self, epoch, train_dataloader, training_args: TrainingArgs
     ):
         embeddings = []
 
@@ -176,7 +177,7 @@ class PatchCore(VADModel):
 
             print("Embedding Extraction:")
             for batch in tqdm(iter(train_dataloader)):
-                embedding = self(batch.to(device))
+                embedding = self(batch.to(self.device))
                 embeddings.append(embedding)
 
             embeddings = torch.cat(embeddings, dim = 0)

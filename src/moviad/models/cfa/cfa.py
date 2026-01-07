@@ -46,6 +46,7 @@ class CFA(VADModel):
             backbone: str,
             gamma_c:int = 1,
             gamma_d:int = 1,
+            feature_maps_channels: int = 1792,
         ):
 
         """
@@ -71,29 +72,19 @@ class CFA(VADModel):
         self.J = 3
         self.r = nn.Parameter(1e-5*torch.ones(1), requires_grad=True)
 
-        self.feature_extractor = feature_extractor
-        self.Descriptor = None
+        self.device = torch.device("cpu")
+
         self.backbone = backbone
         self.feature_maps_shape: tuple = None 
+
+        self.feature_extractor = feature_extractor
+        self.feature_maps_channels = feature_maps_channels
+        self.Descriptor = Descriptor(self.gamma_d, self.feature_maps_channels, self.backbone, self.device).to(self.device)
 
     def to(self, device: torch.device):
         super().to(device)
         self.feature_extractor.to(device)
-        if self.Descriptor:
-            self.Descriptor.to(device)
         self.device = device
-
-    def train(self, mode = True):
-        if self.Descriptor:
-            self.Descriptor.train(mode)
-        self.feature_extractor.eval()
-        return super().train(mode)
-    
-    def eval(self, *args, **kwargs):
-        if self.Descriptor:
-            self.Descriptor.eval()
-        self.feature_extractor.eval()
-        return super().eval(*args, **kwargs)
 
     def initialize_memory_bank(self, training_dataloader: DataLoader):
         """
@@ -133,7 +124,7 @@ class CFA(VADModel):
             p = list(p.values())
 
         if not self.feature_maps_shape:
-            self.feature_maps_shape = (1, int(self.feature_maps_channels.item()), p[0].shape[2], p[0].shape[3])
+            self.feature_maps_shape = (1, self.feature_maps_channels, p[0].shape[2], p[0].shape[3])
 
         phi_p = self.Descriptor(p)
         phi_p = rearrange(phi_p, 'b c h w -> b (h w) c')
@@ -179,7 +170,7 @@ class CFA(VADModel):
         """
 
         self.train()
-        loss = training_args.loss_function(self.model(batch.to(self.device)), self.memory_bank, self.K, self.J, self.r, self.alpha, self.nu)
+        loss = training_args.loss_function(self(batch.to(self.device)), self.memory_bank, self.K, self.J, self.r, self.alpha, self.nu)
         return loss
     
     def train_epoch(self, epoch: int, train_dataloader: torch.utils.data.DataLoader, training_args: TrainingArgs):
@@ -221,10 +212,6 @@ class CFA(VADModel):
 
             if isinstance(p, dict):
                 p = list(p.values())
-
-            if not self.Descriptor:
-                self.feature_maps_channels = nn.Parameter(sum(tensor.size(1) for tensor in p) * torch.ones(1), requires_grad = False)
-                self.Descriptor = Descriptor(self.gamma_d, int(self.feature_maps_channels.item()), self.backbone, self.device).to(self.device)
 
             self.scale = p[0].size(2)
             phi_p = self.Descriptor(p)

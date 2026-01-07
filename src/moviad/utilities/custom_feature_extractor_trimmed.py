@@ -46,7 +46,6 @@ class CustomFeatureExtractor:
         self,
         model_name: str,
         layers_idx: list,
-        device: torch.device,
         frozen=True,
         quantized=False,
         calibration_dataloader=None,
@@ -63,7 +62,7 @@ class CustomFeatureExtractor:
         self.model_name = model_name
         self.quantized = quantized
         self.layers_idx = layers_idx
-        self.device = device
+        self.device = torch.device("cpu")
         self.project_path = Path(__file__).parent.parent
 
         # ¢heck for backbone support
@@ -90,7 +89,7 @@ class CustomFeatureExtractor:
             elif "micronet" in model_name:
                 if frozen:
                     self.model = micronetBB(
-                        device,
+                        self.device,
                         torch.load(
                             Path(
                                 self.project_path,
@@ -99,7 +98,7 @@ class CustomFeatureExtractor:
                         ),
                     )
                 else:
-                    self.model = micronetBB(device)
+                    self.model = micronetBB(self.device)
 
             # check for phinet backbone
             elif "phinet" in model_name:

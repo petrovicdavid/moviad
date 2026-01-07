@@ -31,6 +31,7 @@ class STFPM(VADModel):
         super().__init__()
         self.teacher = teacher
         self.student = student
+        self.device = torch.device("cpu")
 
     def forward(self, batch: torch.Tensor):
         if self.training:
@@ -59,12 +60,6 @@ class STFPM(VADModel):
         super().train(mode)
         self.teacher.model.eval()
         self.student.model.train(mode)
-        return self
-    
-    def eval(self):
-        super().eval()
-        self.teacher.model.eval()
-        self.student.model.eval()
         return self
 
     def parameters(self):

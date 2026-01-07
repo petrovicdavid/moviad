@@ -40,7 +40,7 @@ class Evaluator:
         for image, label, mask, path in tqdm(dataloader, desc="Eval"):
             with torch.no_grad():
                 anom_maps, anom_scores = model(image.to(device))
-
+                
             gt_mask.append(mask.cpu().numpy().astype(int))
             gt_label.append(label.cpu().numpy())
             pred_anom_map.append(anom_maps.cpu().numpy())

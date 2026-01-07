@@ -18,3 +18,6 @@ class TrainingArgs:
             "optimizer": self.optimizer,
             "loss_function": self.loss_function,
         }
+
+    def init_train(self, model: torch.nn.Module):
+        pass

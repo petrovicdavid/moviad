@@ -2,6 +2,10 @@
 .vscode/
 disk
 wandb/*
+wandb/**/*
+wandb
+
+
 
 # Documentation
 docs/*
