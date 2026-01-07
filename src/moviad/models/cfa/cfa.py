@@ -1,10 +1,11 @@
 from __future__ import annotations
-import pathlib
 import os
+from dataclasses import dataclass
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.optim import AdamW
 from torch.utils.data import DataLoader
 from torchvision.transforms import GaussianBlur
 from einops import rearrange
@@ -18,15 +19,31 @@ import matplotlib.pyplot as plt
 
 from moviad.models.components.cfa.descriptor import Descriptor
 from moviad.utilities.custom_feature_extractor_trimmed import CustomFeatureExtractor
-from moviad.utilities.get_sizes import *
+from moviad.models.vad_model import VADModel
+from moviad.models.training_args import TrainingArgs
+from moviad.models.cfa.cfa_loss import soft_boundary
 
-class CFA(nn.Module):
+@dataclass
+class CFATrainArgs(TrainingArgs):
+
+    def init_train(self, model: VADModel):
+        if self.optimizer is None:
+            learning_rate = 1e-3
+            weight_decay = 5e-4
+            self.optimizer = AdamW(params=model.parameters(),
+                            lr=learning_rate,
+                            weight_decay=weight_decay,
+                            amsgrad=True)
+        if self.loss_function is None:
+            self.loss_function = soft_boundary
+
+
+class CFA(VADModel):
 
     def __init__(
             self,
             feature_extractor: CustomFeatureExtractor,
             backbone: str,
-            device: torch.device,
             gamma_c:int = 1,
             gamma_d:int = 1,
         ):
@@ -41,10 +58,9 @@ class CFA(nn.Module):
             device (torch.device) : device where to run the model
         """
 
-        super(CFA, self).__init__()
-        self.device = device
+        super().__init__()
 
-        self.C   = 0
+        self.memory_bank = 0
         self.nu = 1e-3
         self.scale = None
 
@@ -53,13 +69,31 @@ class CFA(nn.Module):
         self.alpha = 1e-1
         self.K = 3
         self.J = 3
-        self.r   = nn.Parameter(1e-5*torch.ones(1), requires_grad=True)
+        self.r = nn.Parameter(1e-5*torch.ones(1), requires_grad=True)
 
         self.feature_extractor = feature_extractor
         self.Descriptor = None
         self.backbone = backbone
+        self.feature_maps_shape: tuple = None 
 
-        self.feature_maps_shape: tuple = None # only for model footprint
+    def to(self, device: torch.device):
+        super().to(device)
+        self.feature_extractor.to(device)
+        if self.Descriptor:
+            self.Descriptor.to(device)
+        self.device = device
+
+    def train(self, mode = True):
+        if self.Descriptor:
+            self.Descriptor.train(mode)
+        self.feature_extractor.eval()
+        return super().train(mode)
+    
+    def eval(self, *args, **kwargs):
+        if self.Descriptor:
+            self.Descriptor.eval()
+        self.feature_extractor.eval()
+        return super().eval(*args, **kwargs)
 
     def initialize_memory_bank(self, training_dataloader: DataLoader):
         """
@@ -69,16 +103,16 @@ class CFA(nn.Module):
             training_dataloader (DataLoader) : training dataloader
         """
 
-        self.init_centroid(self.feature_extractor, training_dataloader)
-        self.C = rearrange(self.C, 'b c h w -> (b h w) c').detach()
+        memory_bank = self.init_centroid(self.feature_extractor, training_dataloader)
+        memory_bank = rearrange(memory_bank, 'b c h w -> (b h w) c').detach()
 
         if self.gamma_c > 1:
-            self.C = self.C.cpu().detach().numpy()
-            self.C = KMeans(n_clusters=(self.scale**2)//self.gamma_c, max_iter=3000).fit(self.C).cluster_centers_
-            self.C = torch.Tensor(self.C).to(self.device)
+            memory_bank = memory_bank.cpu().detach().numpy()
+            memory_bank = KMeans(n_clusters=(self.scale**2)//self.gamma_c, max_iter=3000).fit(memory_bank).cluster_centers_
+            memory_bank = torch.Tensor(memory_bank).to(self.device)
 
-        self.C = self.C.transpose(-1, -2).detach()
-        self.C = nn.Parameter(self.C, requires_grad=False)
+        memory_bank = memory_bank.transpose(-1, -2).detach()
+        return memory_bank
 
     def forward(self, x: torch.Tensor) -> float | tuple[torch.Tensor, torch.Tensor]:
         """
@@ -105,8 +139,8 @@ class CFA(nn.Module):
         phi_p = rearrange(phi_p, 'b c h w -> b (h w) c')
 
         features = torch.sum(torch.pow(phi_p, 2), 2, keepdim=True)
-        centers  = torch.sum(torch.pow(self.C, 2), 0, keepdim=True)
-        f_c      = 2 * torch.matmul(phi_p, (self.C))
+        centers  = torch.sum(torch.pow(self.memory_bank, 2), 0, keepdim=True)
+        f_c      = 2 * torch.matmul(phi_p, (self.memory_bank))
         dist     = features + centers - f_c
         dist     = torch.sqrt(dist)
 
@@ -117,7 +151,7 @@ class CFA(nn.Module):
         dist = dist.unsqueeze(-1)
 
         if self.training:
-            return self.soft_boundary(phi_p)
+            return phi_p
         else:
             self.scale = p[0].size(2)
             scores = rearrange(dist, 'b (h w) c -> b c h w', h=self.scale).cpu().detach()
@@ -133,34 +167,42 @@ class CFA(nn.Module):
             else:
                 return heatmaps.unsqueeze(dim=1), img_scores
 
-    def soft_boundary(self, phi_p: torch.Tensor) -> float:
+    def train_step(self, batch: torch.Tensor, training_args: TrainingArgs):
         """
-        Loss calculation
+        Training step
 
         Args:
-            phi_p (torch.Tensor) : batch of transformed features
+            x (torch.Tensor) : batch of images
 
         Returns:
             loss (float) : CFA loss
         """
 
-
-        features = torch.sum(torch.pow(phi_p, 2), 2, keepdim=True)
-        centers  = torch.sum(torch.pow(self.C, 2), 0, keepdim=True)
-        f_c      = 2 * torch.matmul(phi_p, (self.C))
-        dist     = features + centers - f_c
-        n_neighbors = self.K + self.J
-        dist     = dist.topk(n_neighbors, largest=False).values
-
-        score = (dist[:, : , :self.K] - self.r**2)
-        L_att = (1/self.nu) * torch.mean(torch.max(torch.zeros_like(score), score))
-
-        score = (self.r**2 - dist[:, : , self.J:])
-        L_rep  = (1/self.nu) * torch.mean(torch.max(torch.zeros_like(score), score - self.alpha))
-
-        loss = L_att + L_rep
-
+        self.train()
+        loss = training_args.loss_function(self.model(batch.to(self.device)), self.memory_bank, self.K, self.J, self.r, self.alpha, self.nu)
         return loss
+    
+    def train_epoch(self, epoch: int, train_dataloader: torch.utils.data.DataLoader, training_args: TrainingArgs):
+
+        self.train()
+
+        if epoch == 0:
+            self.memory_bank = self.initialize_memory_bank(train_dataloader)
+            self.memory_bank = nn.Parameter(self.memory_bank, requires_grad=False)
+
+        batch_loss = 0
+        for batch in tqdm(train_dataloader):
+            loss = self.train_step(batch, training_args)
+            batch_loss += loss.item()
+
+            training_args.optimizer.zero_grad() 
+            loss.backward()
+            training_args.optimizer.step()
+
+        avg_batch_loss = batch_loss / len(train_dataloader)
+
+        return avg_batch_loss
+
 
     def init_centroid(self, feature_extractor:CustomFeatureExtractor, data_loader:DataLoader):
         """
@@ -170,6 +212,8 @@ class CFA(nn.Module):
             feature_extractor (CustomFeatureExtractor) : feature extractor to be used
             training_dataloader (torch.utils.data.DataLoader) : training dataloader
         """
+
+        memory_bank = 0
 
         for i, x in enumerate(tqdm(data_loader)):
             x = x.to(self.device)
@@ -184,7 +228,9 @@ class CFA(nn.Module):
 
             self.scale = p[0].size(2)
             phi_p = self.Descriptor(p)
-            self.C = ((self.C * i) + torch.mean(phi_p, dim=0, keepdim=True).detach()) / (i+1)
+            memory_bank = ((memory_bank * i) + torch.mean(phi_p, dim=0, keepdim=True).detach()) / (i+1)
+        
+        return memory_bank
 
     def get_model_size_and_macs(self) -> tuple[dict, float]:
 
@@ -217,9 +263,9 @@ class CFA(nn.Module):
 
         # get MB size and shape
         sizes["memory_bank"] = {
-            "size" : get_tensor_size(self.C),
-            "type" : str(self.C.dtype),
-            "shape" : self.C.shape
+            "size" : get_tensor_size(self.memory_bank),
+            "type" : str(self.memory_bank.dtype),
+            "shape" : self.memory_bank.shape
         }
 
         total_size = sizes["feature_extractor"]["size"] + sizes["patch_descriptor"]["size"] + sizes["memory_bank"]["size"]
@@ -242,7 +288,7 @@ class CFA(nn.Module):
             raise RuntimeError("Memory Bank tensor not in model checkpoint")
 
         # load the memory bank
-        self.C = state_dict["C"]
+        self.memory_bank = state_dict["C"]
 
         # load the Patch Descriptor
         self.Descriptor = Descriptor(self.gamma_d, int(state_dict["feature_maps_channels"]), self.backbone, self.device)

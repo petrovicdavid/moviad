@@ -11,7 +11,7 @@ class ContinualTrainer:
     def __init__(self, 
                  continual_dataset: ContinualDataset, 
                  model: ContinualModel, 
-                 device, 
+                 device: torch.device, 
                  metrics: list[Metric], 
                  training_args: TrainingArgs,
                  logger: any = None
@@ -35,14 +35,14 @@ class ContinualTrainer:
         for task_index in range(len(self.continual_dataset)):
             print(f"Training for task: {task_index} , {self.continual_dataset.get_task_category(task_index)}")
 
-            train_dataset, test_dataset = self.continual_dataset.get_task_data(task_index)
+            train_dataset, eval_dataset = self.continual_dataset.get_task_data(task_index)
 
             self.model.start_task()
 
             self.model.train_task(
                 task_index=task_index,
                 train_dataset=train_dataset,
-                test_dataset=test_dataset,
+                eval_dataset=eval_dataset,
                 train_args=self.trainer_arguments,
                 metrics=self.metrics,
                 device=self.device,
@@ -63,7 +63,7 @@ class ContinualTrainer:
                     shuffle=False,
                     num_workers=4
                 )
-                results = Evaluator.evaluate(self.model.vad_model, eval_dataloader, self.metrics, device=self.device)
+                results = Evaluator.evaluate(self.model, eval_dataloader, self.metrics, device=self.device)
 
                 # update summary metrics
                 for metric in summary_metrics.keys():

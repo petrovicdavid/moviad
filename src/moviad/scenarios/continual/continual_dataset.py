@@ -16,6 +16,7 @@ class ContinualDataset:
     def __init__(self,
                  dataset_arguments: DatasetArguments,
                  dataset_class: VADDataset,
+                 categories: List[str] = None,
                 ):
 
         """
@@ -24,7 +25,11 @@ class ContinualDataset:
 
         self.dataset_arguments = dataset_arguments
         self.dataset_class = dataset_class
-        self.categories = dataset_class.get_categories()
+        
+        if categories is not None:
+            self.categories = categories
+        else:
+            self.categories = dataset_class.get_categories()
 
     def __len__(self):
         return len(self.categories)

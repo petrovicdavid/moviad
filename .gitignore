@@ -1,6 +1,7 @@
 *.idea
 .vscode/
 disk
+wandb/*
 
 # Documentation
 docs/*

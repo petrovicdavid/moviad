@@ -40,65 +40,58 @@ class STFPM(VADModel):
             student_features = self.student(batch)
 
             return teacher_features, student_features
-
         else:
             student_features = self.student(batch)
-            teacher_features = self.teacher(batch)
+            teacher_features = self.teacher(batch) 
 
             return self.post_process(
                 teacher_features, student_features, batch.shape[2:]
             )
-
-    def __call__(self, batch: torch.Tensor):
-        return self.forward(batch)
+        
+    def to(self, device: torch.device):
+        super().to(device)
+        self.teacher.to(device)
+        self.student.to(device)
+        self.device = device
+        return self
 
     def train(self, mode: bool = True):
+        super().train(mode)
         self.teacher.model.eval()
         self.student.model.train(mode)
-        return super().train(mode)
-
-    def eval(self, *args, **kwargs):
+        return self
+    
+    def eval(self):
+        super().eval()
         self.teacher.model.eval()
         self.student.model.eval()
-        return super().eval(*args, **kwargs)
+        return self
 
     def parameters(self):
         return self.student.model.parameters()
 
     def train_epoch(
-        self, epoch, train_dataloader, device, training_args: STFPMTrainArgs
+        self, epoch, train_dataloader, training_args: STFPMTrainArgs
     ):
-        loss_function = training_args.loss_function
-
         avg_batch_loss = 0
 
         # train the model
         for batch in tqdm(train_dataloader):
-            batch = batch.to(device)
-            teacher_features, student_features = self.forward(batch)
-
-            for i in range(len(student_features)):
-                teacher_features[i] = F.normalize(teacher_features[i], dim=1)
-                student_features[i] = F.normalize(student_features[i], dim=1)
-                loss = loss_function(teacher_features[i], student_features[i])
-
-            avg_batch_loss += loss.item()
-
-            training_args.optimizer.zero_grad()
-            loss.backward()
-            training_args.optimizer.step()
+            avg_batch_loss += self.train_step(batch, training_args)
 
         avg_batch_loss /= len(train_dataloader)
         return avg_batch_loss
 
-    def train_step(self, batch: torch.Tensor, device, training_args: TrainingArgs):
-        batch = batch.to(device)
+    def train_step(self, batch: torch.Tensor, training_args: TrainingArgs):
+        batch = batch.to(self.device)
         teacher_features, student_features = self.forward(batch)
+
+        loss = 0
 
         for i in range(len(student_features)):
             teacher_features[i] = F.normalize(teacher_features[i], dim=1)
             student_features[i] = F.normalize(student_features[i], dim=1)
-            loss = training_args.loss_function(teacher_features[i], student_features[i])
+            loss += training_args.loss_function(teacher_features[i], student_features[i])
 
         training_args.optimizer.zero_grad()
         loss.backward()

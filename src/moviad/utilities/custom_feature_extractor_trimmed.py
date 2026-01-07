@@ -317,6 +317,10 @@ class CustomFeatureExtractor:
         for idx in self.layers_idx:
             layers[int(idx)].register_forward_hook(hook)
 
+    def to(self, device: torch.device):
+        self.device = device
+        self.model.to(device)
+
     def __call__(self, batch: torch.Tensor) -> list[torch.Tensor]:
 
         if self.model_name in TORCH_BACKBONES:

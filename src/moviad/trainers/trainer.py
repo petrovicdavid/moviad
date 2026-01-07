@@ -19,7 +19,7 @@ class Trainer:
         metrics: list[Metric],
         device: torch.device,
         logger: Any | None = None,
-        logging_prefix: str = None,
+        logging_prefix: str = "",
         save_path: str | None = None,
         saving_criteria: Callable | None = None,
     ):
@@ -66,6 +66,9 @@ class Trainer:
 
     def train(self):
 
+        if self.logger:
+            self.logger.config.update(self.train_args.__dict__)
+
         self.train_args.init_train(self.model)
         best_metrics = {metric.name: 0.0 for metric in self.metrics}
 
@@ -75,7 +78,7 @@ class Trainer:
 
             print(f"EPOCH: {epoch}")
 
-            avg_batch_loss = self.model.train_epoch(epoch, self.train_dataloader, self.device, self.train_args)
+            avg_batch_loss = self.model.train_epoch(epoch, self.train_dataloader, self.train_args)
 
             if self.logger:
                 self.logger.log({

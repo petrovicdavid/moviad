@@ -17,30 +17,31 @@ class Memory:
                 idx = random.randrange(len(self.tasks_memory[task_id]))
                 self.tasks_memory[task_id].pop(idx)
         
-    def add_samples(self, task_id, samples): 
+    def add_samples(self, task_id: int, samples: torch.Tensor): 
         if task_id not in self.tasks_memory.keys():
             self.tasks_memory[task_id] = []
             self.num_tasks += 1
-            self.rebalance()
+            self._rebalance()
 
         task_quota = self.memory_size // self.num_tasks
 
         for sample in samples:
             if len(self.tasks_memory[task_id]) < task_quota:
-                self.tasks_memory[task_id].append(sample)
+                self.tasks_memory[task_id].append(sample.clone())
             else:
-                j = random.randint(0, self.n_seen[task_id] - 1)
+                j = random.randint(0, len(self.tasks_memory[task_id]) - 1)
                 if j < task_quota:
-                    self.tasks_memory[task_id][j] = sample
+                    self.tasks_memory[task_id][j] = sample.clone()
 
     def get_samples(self, n_replay_samples: int):
         samples_per_task = n_replay_samples // self.num_tasks
 
         samples = []
 
-        for task_id, memory_samples in self.tasks_memory: 
+        for task_id, memory_samples in self.tasks_memory.items(): 
             n_samples = min(samples_per_task, len(memory_samples))
             samples_idx = torch.randperm(len(memory_samples))[:n_samples]
-            samples.append(self.tasks_memory[task_id][samples_idx])
+            for idx in samples_idx:
+                samples.append(self.tasks_memory[task_id][idx].unsqueeze(dim=0))
 
-        return samples    
+        return torch.cat(samples)

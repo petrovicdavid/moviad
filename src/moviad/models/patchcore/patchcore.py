@@ -13,23 +13,26 @@ import torch
 import torch.nn.functional as F
 #from memory_profiler import profile
 from torch import Tensor, nn
+from tqdm import tqdm
 
 from .product_quantizer import ProductQuantizer
+from moviad.models.vad_model import VADModel
 from moviad.models.patchcore.anomaly_map import AnomalyMapGenerator
+from moviad.models.patchcore.kcenter_greedy import CoresetExtractor
+from moviad.models.training_args import TrainingArgs
 from moviad.utilities.custom_feature_extractor_trimmed import CustomFeatureExtractor
-from moviad.utilities.get_sizes import *
 
-class PatchCore(nn.Module):
+class PatchCore(VADModel):
     """Patchcore Module."""
 
     def __init__(
         self,
         device:torch.device,
-        input_size: tuple[int],
         feature_extractor: CustomFeatureExtractor,
+        coreset_extractor: CoresetExtractor = None,
         num_neighbors: int = 9,
         apply_quantization: bool = False,
-        k: int = 10000
+        memory_bank_size: int = 10000
     ) -> None:
 
         """
@@ -46,33 +49,26 @@ class PatchCore(nn.Module):
 
         self.num_neighbors = num_neighbors
         self.device = device
-        self.input_size = input_size
 
         self.feature_extractor = feature_extractor
         self.feature_pooler = torch.nn.AvgPool2d(3,1,1)
         self.anomaly_map_generator = AnomalyMapGenerator()
-        self.k = k
-        self.register_buffer("memory_bank", Tensor())
+        self.memory_bank_size = memory_bank_size
         self.memory_bank: Tensor
+        
         self.apply_quantization = apply_quantization
         if apply_quantization:
             self.product_quantizer = ProductQuantizer()
 
-    def load(self, model_state_dict_patch, quantizer_state_dict_path):
-        """
-        Load the Patchcore model
+        if coreset_extractor is None:
+            self.coreset_extractor = CoresetExtractor(False, self.device, k=self.model.k)
+        else:
+            self.coreset_extractor = coreset_extractor
 
-        Parameters:
-        ----------
-            model_state_dict_patch (dict): model state dictionary
-            quantizer_state_dict_patch (dict): quantizer state dictionary
-        """
-
-        self.load_model(model_state_dict_patch)
-        if quantizer_state_dict_path is not None:
-            self.product_quantizer = ProductQuantizer()
-            self.product_quantizer.load(quantizer_state_dict_path)
-            self.apply_quantization = True
+    def to(self, device: torch.device):
+        super().to(device)
+        self.memory_bank.to(device)
+        self.feature_extractor.to(device)
 
     def forward(self, input_tensor: Tensor) -> Tensor | dict[str, Tensor]:
         """Return Embedding during training, or a tuple of anomaly map and anomaly score during testing.
@@ -123,34 +119,80 @@ class PatchCore(nn.Module):
         if self.training:
             output = embedding
         else:
-            if self.feature_extractor.quantized:
-                embedding = torch.int_repr(embedding).to(torch.float64)
-
-            # apply nearest neighbor search
-            if self.apply_quantization:
-                patch_scores, locations = self.nearest_neighbors_quantized(embedding=embedding, n_neighbors=1)
-            else:
-                patch_scores, locations = self.nearest_neighbors(embedding=embedding, n_neighbors=1)
-
-            # print(patch_scores.shape)
-            # print("Locations" + str(locations.shape))
-
-            # reshape to batch dimension 
-            patch_scores = patch_scores.reshape((batch_size, -1))
-            locations = locations.reshape((batch_size, -1))
-
-            # compute the anomaly score of the images
-            pred_scores = self.compute_anomaly_score(patch_scores, locations, embedding)
-
-            # reshape to w,h
-            patch_scores = patch_scores.reshape((batch_size, 1, width, height))
-
-            # get the anomaly map
-            anomaly_maps = self.anomaly_map_generator(patch_scores, image_size = self.input_size)
+            anomaly_maps, pred_scores = self.calculate_anomaly_maps_scores(
+                embedding=embedding,
+                batch_size=batch_size,
+                width=width,
+                height=height,
+                memory_bank=self.memory_bank
+            )
 
             output = (anomaly_maps, pred_scores)
 
         return output
+
+    def calculate_anomaly_maps_scores(
+        self,
+        embedding: Tensor,
+        memory_bank: Tensor,
+        batch_size: int,
+        width: int,
+        height: int
+    ) -> tuple[Tensor, Tensor]:
+        
+        if self.feature_extractor.quantized:
+            embedding = torch.int_repr(embedding).to(torch.float64)
+
+        # apply nearest neighbor search
+        if self.apply_quantization:
+            patch_scores, locations = self.nearest_neighbors_quantized(embedding=embedding, n_neighbors=1)
+        else:
+            patch_scores, locations = self.nearest_neighbors(embedding=embedding, n_neighbors=1, memory_bank=memory_bank)
+
+        # print(patch_scores.shape)
+        # print("Locations" + str(locations.shape))
+
+        # reshape to batch dimension 
+        patch_scores = patch_scores.reshape((batch_size, -1))
+        locations = locations.reshape((batch_size, -1))
+
+        # compute the anomaly score of the images
+        pred_scores = self.compute_anomaly_score(patch_scores, locations, embedding)
+
+        # reshape to w,h
+        patch_scores = patch_scores.reshape((batch_size, 1, width, height))
+
+        # get the anomaly map
+        anomaly_maps = self.anomaly_map_generator(patch_scores, image_size = self.input_size)
+
+        return anomaly_maps, pred_scores
+
+    def train_epoch(
+        self, epoch, train_dataloader, device, training_args: TrainingArgs
+    ):
+        embeddings = []
+
+        with torch.no_grad():
+
+            print("Embedding Extraction:")
+            for batch in tqdm(iter(train_dataloader)):
+                embedding = self(batch.to(device))
+                embeddings.append(embedding)
+
+            embeddings = torch.cat(embeddings, dim = 0)
+            torch.cuda.empty_cache()
+
+            #apply coreset reduction
+            print("Coreset Extraction:")
+            coreset = self.coreset_extractor.extract_coreset(embeddings)
+
+            if self.apply_quantization:
+                assert self.product_quantizer is not None, "Product Quantizer not initialized"
+
+                self.product_quantizer.fit(coreset)
+                coreset = self.product_quantizer.encode(coreset)
+
+            self.memory_bank = coreset
 
     def generate_embedding(self, features: dict[str, Tensor]) -> Tensor:
         """Generate embedding from hierarchical feature map.
@@ -335,7 +377,7 @@ class PatchCore(nn.Module):
         # 6. Apply the weight factor to the score
         return weights * score  # s in the paper
 
-    def save_model(self, output_path):
+    def save(self, output_path):
         """
         Save the Patchcore model
 
@@ -343,12 +385,48 @@ class PatchCore(nn.Module):
         ----------
             output_path (str): where the model will be saved
         """
-
+        self.register_buffer("memory_bank", Tensor())
         model_state_dict = self.state_dict()
         if self.apply_quantization:
             assert self.product_quantizer is not None
             self.product_quantizer.save(output_path + "/product_quantizer.bin")
         torch.save(model_state_dict, output_path)
+
+    def load(self, model_state_dict_patch, quantizer_state_dict_path):
+        """
+        Load the Patchcore model
+
+        Parameters:
+        ----------
+            model_state_dict_patch (dict): model state dictionary
+            quantizer_state_dict_patch (dict): quantizer state dictionary
+        """
+
+        self._load_model(model_state_dict_patch)
+        if quantizer_state_dict_path is not None:
+            self.product_quantizer = ProductQuantizer()
+            self.product_quantizer.load(quantizer_state_dict_path)
+            self.apply_quantization = True
+
+    def _load_model(self, path):
+        """
+        Load the Patchcore memory bank
+
+        Parameters:
+        ----------
+            path (str): where the pt file containing the memory bank is stored
+        """
+
+        state_dict = torch.load(path)
+
+        ## TODO: MemoryBank quantization
+
+        if "memory_bank" not in state_dict.keys():
+            raise RuntimeError("Memory Bank tensor not in model checkpoint")
+
+        # load the memory bank
+        self.memory_bank = state_dict["memory_bank"]
+
 
     def save_anomaly_map(self, dirpath, anomaly_map, pred_score, filepath, x_type, mask):
         """
@@ -404,45 +482,27 @@ class PatchCore(nn.Module):
         # Show the plot
         plt.savefig(str(dirpath + f"/{x_type}_{filename}.jpg"))
 
-    def get_model_size_and_macs(self):
-        sizes = {}
+    # def get_model_size_and_macs(self):
+    #     sizes = {}
 
-        # get feature extractor size, params, and macs
+    #     # get feature extractor size, params, and macs
 
-        macs, params = get_model_macs(self.feature_extractor.model)
-        sizes["feature_extractor"] = {
-            "size" : get_torch_model_size(self.feature_extractor.model),
-            "params" : params,
-            "macs" : macs
-        }
+    #     macs, params = get_model_macs(self.feature_extractor.model)
+    #     sizes["feature_extractor"] = {
+    #         "size" : get_torch_model_size(self.feature_extractor.model),
+    #         "params" : params,
+    #         "macs" : macs
+    #     }
 
-        # get MB size and shape
-        sizes["memory_bank"] = {
-            "size" : get_tensor_size(self.memory_bank),
-            "type" : str(self.memory_bank.dtype),
-            "shape" : self.memory_bank.shape
-        }
+    #     # get MB size and shape
+    #     sizes["memory_bank"] = {
+    #         "size" : get_tensor_size(self.memory_bank),
+    #         "type" : str(self.memory_bank.dtype),
+    #         "shape" : self.memory_bank.shape
+    #     }
 
-        total_size = sizes["feature_extractor"]["size"] + sizes["memory_bank"]["size"]
+    #     total_size = sizes["feature_extractor"]["size"] + sizes["memory_bank"]["size"]
 
-        return sizes, total_size
+    #     return sizes, total_size
 
-    def load_model(self, path):
-
-        """
-        Load the Patchcore memory bank
-
-        Parameters:
-        ----------
-            path (str): where the pt file containing the memory bank is stored
-        """
-
-        state_dict = torch.load(path)
-
-        ## TODO: MemoryBank quantization
-
-        if "memory_bank" not in state_dict.keys():
-            raise RuntimeError("Memory Bank tensor not in model checkpoint")
-
-        # load the memory bank
-        self.memory_bank = state_dict["memory_bank"]
+    

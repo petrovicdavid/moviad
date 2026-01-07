@@ -7,27 +7,29 @@ def test_model_create_train():
     from moviad.datasets.dataset_arguments import DatasetArguments
     from moviad.utilities.evaluation.metrics import MetricLvl, RocAuc, AvgPrec, F1, ProAuc
     import torch
+    import wandb
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    wandb.init(project="moviad_test", name="stfpm")
 
     teacher = CustomFeatureExtractor("wide_resnet50_2", ["layer1", "layer2", "layer3"], device, frozen=True)    
     student = CustomFeatureExtractor("wide_resnet50_2", ["layer1", "layer2", "layer3"], device, frozen=False)
 
-    args = {
-        "dataset_path" : "/mnt/mydisk/manuel_barusco/datasets/mvtec",
-        "category" : "bottle",
-        "split" : "train",
-        "img_size" : (256, 256),
-        "gt_mask_size" : (256, 256),
-        "image_transform_list" : None
-    }
-    train_dataset = MVTecDataset(DatasetArguments(**args))
+    args = DatasetArguments(
+        dataset_path = "/mnt/mydisk/manuel_barusco/datasets/mvtec",
+        img_size = (256, 256),
+        gt_mask_size = (256, 256),
+        image_transform_list = None
+    )
+
+    train_dataset = MVTecDataset(args, category="bottle", split="train")
     train_dataset = Subset(train_dataset, list(range(0, 10)))  # use a subset for faster testing
 
-    args["split"] = "test"
-    test_dataset = MVTecDataset(DatasetArguments(**args))
+    test_dataset = MVTecDataset(args, category="bottle", split="test")
 
-    model = STFPM(teacher, student).to(device)
+    model = STFPM(teacher, student)
+    model.to(device)
     training_args = STFPMTrainArgs(epochs=2, batch_size=4)
     training_args.init_train(model)
 
@@ -46,7 +48,7 @@ def test_model_create_train():
             ProAuc(MetricLvl.PIXEL),
         ],
         device=device,
-        logger=None,
+        logger=wandb,
         save_path=None,
         saving_criteria=None,
     )

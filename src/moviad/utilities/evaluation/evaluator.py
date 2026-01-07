@@ -6,6 +6,7 @@ import torch
 import numpy as np
 
 from .metrics import MetricLvl, Metric
+from moviad.models.vad_model import VADModel
 
 
 def min_max_norm(x):
@@ -23,7 +24,7 @@ class Evaluator:
     """
 
     @staticmethod
-    def evaluate(model, dataloader, metrics: list[Metric], device, postprocess: Callable = min_max_norm) -> dict:
+    def evaluate(model: VADModel, dataloader, metrics: list[Metric], device, postprocess: Callable = min_max_norm) -> dict:
         """
         Args:
             model: a model object on which you can call model.predict(batched_images)

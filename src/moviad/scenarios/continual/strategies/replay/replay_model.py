@@ -1,5 +1,6 @@
 import torch
 from tqdm import trange
+from tqdm import tqdm
 
 from moviad.scenarios.continual.continual_model import ContinualModel
 from moviad.models.training_args import TrainingArgs
@@ -34,8 +35,8 @@ class Replay(ContinualModel):
             num_workers=4
         ) if eval_dataset is not None else None
 
-        train_args.init_train(self.model)
-        best_metrics = {metric.name: 0.0 for metric in self.metrics}
+        train_args.init_train(self.vad_model)
+        best_metrics = {metric.name: 0.0 for metric in metrics}
         n_replay_samples = int(train_args.batch_size * self.replay_ratio)
 
         for epoch in range(train_args.epochs):
@@ -46,32 +47,34 @@ class Replay(ContinualModel):
 
             avg_batch_loss = 0.0
 
-            for batch in train_dataloader:
+            for batch in tqdm(train_dataloader):
 
-                # combine with samples from memory
-                if self.memory.num_tasks > 0:
+                # combine with past samples from memory
+                if self.memory.num_tasks > 1:
                     memory_samples = self.memory.get_samples(n_replay_samples)
-                    batch = torch.cat((batch, memory_samples), dim=0)
+
+                    # replace part of the batch with memory samples
+                    replace_idx = torch.randperm(batch.size(0))[:n_replay_samples]
+                    batch[replace_idx] = memory_samples
 
                 avg_batch_loss += self.vad_model.train_step(batch, device, train_args)
 
                 # update memory with new samples
-                self.memory.add_samples(batch)
+                self.memory.add_samples(task_index, batch)
 
             avg_batch_loss /= len(train_dataloader)
 
-            if self.logger:
-                self.logger.log({
+            if logger:
+                logger.log({
                     f"Task_T{task_index}/train/epoch": epoch,
                     f"Task_T{task_index}/train/train_loss": avg_batch_loss,
                 })
 
-            if (epoch + 1) % self.train_args.evaluation_epoch_interval == 0:
+            if (epoch + 1) % train_args.evaluation_epoch_interval == 0:
                 print("Evaluating model...")
-                results = Evaluator.evaluate(self.vad_model, eval_dataloader, self.metrics, self.device)
+                results = Evaluator.evaluate(self.vad_model, eval_dataloader, metrics, device)
 
-                # save the model if needed
-                self.save_model(best_metrics, results)
+                # TBD: save the model if needed
 
                 # update the best metrics
                 best_metrics = Trainer.update_best_metrics(best_metrics, results)
@@ -79,11 +82,10 @@ class Replay(ContinualModel):
                 print("Training performances:")
                 Trainer.print_metrics(results)
 
-                if self.logger is not None:
-                    if self.logging_prefix is not None:
-                        self.logger.log({
-                            f"{self.logging_prefix}train/{metric_name}": value for metric_name, value in results.items()
-                        })
+                if logger is not None:
+                    logger.log({
+                        f"Task_T{task_index}/train/{metric_name}": value for metric_name, value in results.items()
+                    })
         
 
     def end_task(self):
