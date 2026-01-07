@@ -66,10 +66,11 @@ class Trainer:
 
     def train(self):
 
+        self.train_args.init_train(self.model)
+
         if self.logger:
             self.logger.config.update(self.train_args.__dict__)
-
-        self.train_args.init_train(self.model)
+            
         best_metrics = {metric.name: 0.0 for metric in self.metrics}
 
         for epoch in range(self.train_args.epochs):

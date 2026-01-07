@@ -1,9 +1,12 @@
+from tqdm import trange
+import torch
+
 from moviad.scenarios.continual.continual_model import ContinualModel
 from moviad.models.training_args import TrainingArgs
 from moviad.models.vad_model import VADModel
+from moviad.datasets.vad_dataset import VADDataset
+from moviad.utilities.evaluation.metrics import Metric
 from moviad.trainers.trainer import Trainer
-
-from tqdm import trange
 
 class FineTuning(ContinualModel):
 
@@ -13,16 +16,23 @@ class FineTuning(ContinualModel):
     def start_task(self):
         pass
 
-    def train_task(self, task_index: int, train_dataset, test_dataset, train_args, metrics, device, logger):
+    def train_task(self, 
+                   task_index: int, 
+                   train_dataset:VADDataset, 
+                   eval_dataset:VADDataset,
+                   metrics:list[Metric], 
+                   device: torch.device, 
+                   logger = None,
+                   train_args:TrainingArgs = None):
 
         trainer = Trainer(
             train_args,
             self.vad_model,
             train_dataset,
-            test_dataset,
+            eval_dataset,
             metrics=metrics,
             device=device,
-            logger=None,
+            logger=logger,
             logging_prefix=f"Task_T{task_index}/",
         )
 

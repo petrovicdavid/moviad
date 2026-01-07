@@ -17,12 +17,14 @@ class ContinualModel(ABC):
     def train(self, mode: bool = True):
         self.vad_model.train(mode)
     
-    def eval(self, *args, **kwargs):
-        self.vad_model.eval(*args, **kwargs)
-        return super().eval(*args, **kwargs)
+    def eval(self):
+        self.vad_model.eval()
     
     def forward(self, batch: torch.Tensor):
-        return self.vad_model.forward(batch)
+        return self.vad_model(batch)
+    
+    def __call__(self, batch: torch.Tensor):
+        return self.forward(batch)
 
     @abstractmethod
     def start_task(self, train_args: TrainingArgs = None): ...
@@ -36,6 +38,6 @@ class ContinualModel(ABC):
                    device: torch.device, 
                    logger = None,
                    train_args:TrainingArgs = None): ...
-
+    
     @abstractmethod
     def end_task(self): ...

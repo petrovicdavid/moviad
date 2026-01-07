@@ -53,11 +53,11 @@ class Replay(ContinualModel):
                 if self.memory.num_tasks > 1:
                     memory_samples = self.memory.get_samples(n_replay_samples)
 
-                    # replace part of the batch with memory samples
+                    # replace randomly part of the batch with memory samples
                     replace_idx = torch.randperm(batch.size(0))[:n_replay_samples]
                     batch[replace_idx] = memory_samples
 
-                avg_batch_loss += self.vad_model.train_step(batch, device, train_args)
+                avg_batch_loss += self.vad_model.train_step(batch, train_args)
 
                 # update memory with new samples
                 self.memory.add_samples(task_index, batch)

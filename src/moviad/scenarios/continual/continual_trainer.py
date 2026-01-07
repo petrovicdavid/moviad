@@ -10,7 +10,7 @@ class ContinualTrainer:
 
     def __init__(self, 
                  continual_dataset: ContinualDataset, 
-                 model: ContinualModel, 
+                 continual_model: ContinualModel, 
                  device: torch.device, 
                  metrics: list[Metric], 
                  training_args: TrainingArgs,
@@ -23,7 +23,7 @@ class ContinualTrainer:
             trainer_arguments (TrainerArguments): arguments for the trainer
         """
         self.continual_dataset = continual_dataset
-        self.model = model
+        self.continual_model = continual_model
         self.trainer_arguments = training_args
         self.metrics = metrics
         self.device = device
@@ -37,9 +37,9 @@ class ContinualTrainer:
 
             train_dataset, eval_dataset = self.continual_dataset.get_task_data(task_index)
 
-            self.model.start_task()
+            self.continual_model.start_task()
 
-            self.model.train_task(
+            self.continual_model.train_task(
                 task_index=task_index,
                 train_dataset=train_dataset,
                 eval_dataset=eval_dataset,
@@ -49,8 +49,9 @@ class ContinualTrainer:
                 logger=self.logger,
             )
 
-            self.model.end_task()
+            self.continual_model.end_task()
 
+            # Evaluate on all previous tasks and get summary metrics
             summary_metrics = { metric.name: [] for metric in self.metrics }
 
             previous_tasks_index = self.continual_dataset.get_previous_tasks(task_index)
@@ -63,7 +64,7 @@ class ContinualTrainer:
                     shuffle=False,
                     num_workers=4
                 )
-                results = Evaluator.evaluate(self.model, eval_dataloader, self.metrics, device=self.device)
+                results = Evaluator.evaluate(self.continual_model, eval_dataloader, self.metrics, device=self.device)
 
                 # update summary metrics
                 for metric in summary_metrics.keys():

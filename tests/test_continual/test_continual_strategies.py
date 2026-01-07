@@ -9,11 +9,14 @@ def test_stfpm_fine_tuning():
     from moviad.datasets.dataset_arguments import DatasetArguments
     from moviad.utilities.evaluation.metrics import MetricLvl, RocAuc, AvgPrec, F1, ProAuc
     import torch
+    import wandb
+
+    wandb.init(project="moviad_test", name="stfpm_continual_fine_tuning")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    teacher = CustomFeatureExtractor("wide_resnet50_2", ["layer1", "layer2", "layer3"], device, frozen=True)    
-    student = CustomFeatureExtractor("wide_resnet50_2", ["layer1", "layer2", "layer3"], device, frozen=False)
+    teacher = CustomFeatureExtractor("wide_resnet50_2", ["layer1", "layer2", "layer3"], frozen=True)    
+    student = CustomFeatureExtractor("wide_resnet50_2", ["layer1", "layer2", "layer3"], frozen=False)
     model = STFPM(teacher, student).to(device)
 
     args = {
@@ -44,7 +47,7 @@ def test_stfpm_fine_tuning():
             ProAuc(MetricLvl.PIXEL),
         ],
         training_args=STFPMTrainArgs(epochs=2, batch_size=4),
-        logger=None
+        logger=wandb
     )
 
     # check for parameter updates
@@ -67,8 +70,8 @@ def test_stfpm_replay():
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    teacher = CustomFeatureExtractor("wide_resnet50_2", ["layer1", "layer2", "layer3"], device, frozen=True)    
-    student = CustomFeatureExtractor("wide_resnet50_2", ["layer1", "layer2", "layer3"], device, frozen=False)
+    teacher = CustomFeatureExtractor("wide_resnet50_2", ["layer1", "layer2", "layer3"], frozen=True)    
+    student = CustomFeatureExtractor("wide_resnet50_2", ["layer1", "layer2", "layer3"], frozen=False)
     model = STFPM(teacher, student).to(device)
 
     args = {
